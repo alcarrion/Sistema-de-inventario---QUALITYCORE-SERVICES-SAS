@@ -1,1 +1,1 @@
-# Sistema-de-inventario---QUALITYCORE-SERVICES-SAS
+# Sistema-de-inventario---QUALITYCORE-SERVICES-
