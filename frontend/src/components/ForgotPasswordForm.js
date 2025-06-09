@@ -1,3 +1,4 @@
+// src/components/ForgotPasswordForm.js
 import React, { useState } from "react";
 import { forgotPassword } from "../services/api";
 import { Mail } from "lucide-react";

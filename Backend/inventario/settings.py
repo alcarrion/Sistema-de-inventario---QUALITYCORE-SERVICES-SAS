@@ -28,6 +28,14 @@ INSTALLED_APPS = [
     'productos',  # tu app
 ]
 
+AUTH_USER_MODEL = 'productos.Usuario'
+
+AUTHENTICATION_BACKENDS = [
+    'productos.backends.EmailBackend',   # Cambia 'tuapp' por el nombre de tu app
+    'django.contrib.auth.backends.ModelBackend',  # Opción por defecto
+]
+
+
 # --- Middleware ---
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -72,6 +80,7 @@ DATABASES = {
     }
 }
 
+
 # --- Validadores de contraseña ---
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
@@ -79,6 +88,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
 ]
+
+# --- Enviar correo para recuperar contraseña ---
+EMAIL_HOST = env('EMAIL_HOST')
+EMAIL_PORT = env('EMAIL_PORT')
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
 # --- Internacionalización ---
 LANGUAGE_CODE = 'es-ec'
@@ -90,5 +107,22 @@ USE_TZ = True
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+
+
 # --- CORS para frontend ---
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # URL de tu frontend
+]
+CORS_ALLOW_CREDENTIALS = True  # <- Esto te permite enviar cookies/sesiones
+
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+
+
+
+
+# --- CORS para frontend ---
+#CORS_ALLOW_ALL_ORIGINS = True

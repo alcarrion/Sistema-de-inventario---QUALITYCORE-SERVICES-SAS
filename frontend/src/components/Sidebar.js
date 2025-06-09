@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import "../App.css";
 
-export default function Sidebar({ user, onLogout }) {
+export default function Sidebar({ user, onLogout, onShowPerfil }) {
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
@@ -22,13 +22,19 @@ export default function Sidebar({ user, onLogout }) {
         <a><User size={20}/> Clientes</a>
         <a><DollarSign size={20}/> Cotización</a>
       </nav>
+      <div style={{ flex: 4 }} />
+      {/* BLOQUE USUARIO + LOGOUT */}
       <div className="sidebar-user">
-        <div className="sidebar-user-info">
-          <div className="sidebar-user-avatar">{user?.first_name?.[0] || user?.username?.[0] || "U"}</div>
-          <div>
-            <div className="sidebar-user-name">{user?.first_name || user?.username || "Usuario"}</div>
-            <div className="sidebar-user-role">Administrador</div>
+        <div
+          className="sidebar-user-info clickable"
+          onClick={onShowPerfil}
+          style={{ cursor: "pointer" }}
+        >
+          <div className="sidebar-user-avatar">
+            {user?.nombre?.[0]?.toUpperCase() || "U"}
           </div>
+          <div className="sidebar-user-name">{user?.nombre || "Usuario"}</div>
+          <div className="sidebar-user-role">{user?.rol || "Sin rol"}</div>
         </div>
         <button className="sidebar-logout" onClick={onLogout}>
           <LogOut size={18} style={{marginRight:8}}/> Cerrar Sesión

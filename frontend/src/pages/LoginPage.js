@@ -1,13 +1,24 @@
-import React, { useState } from "react";
+// src/pages/LoginPage.js
+import React, { useEffect, useState } from "react";
 import LoginForm from "../components/LoginForm";
 import ForgotPasswordForm from "../components/ForgotPasswordForm";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 
+
+
 export default function LoginPage() {
   const [showForgot, setShowForgot] = useState(false);
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Esto fuerza a que Django entregue el csrftoken antes de cualquier POST
+    fetch("http://localhost:8000/api/productos/usuarios/", {
+      method: "GET",
+      credentials: "include"
+    });
+  }, []);
 
   return (
     <div className="login-container">
