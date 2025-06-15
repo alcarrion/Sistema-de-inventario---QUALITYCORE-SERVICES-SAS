@@ -1,22 +1,6 @@
 // src/components/ChangePasswordForm.js
 import React, { useState } from "react";
-import { API_URL } from "../services/api";
-
-// Función para obtener el CSRF token de las cookies
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + "=")) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+import { API_URL, getCookie } from "../services/api";
 
 export function ChangePasswordForm({ onSave, onCancel }) {
   const [oldPass, setOldPass] = useState("");
@@ -61,9 +45,9 @@ export function ChangePasswordForm({ onSave, onCancel }) {
 
   return (
     <form className="custom-form" onSubmit={handleSubmit}>
-      <div className="form-title">Change Password</div>
+      <div className="form-title">Cambiar Contraseña</div>
       <div className="form-group">
-        <label>Old Password</label>
+        <label>Contraseña Actual</label>
         <input
           type="password"
           value={oldPass}
@@ -72,7 +56,7 @@ export function ChangePasswordForm({ onSave, onCancel }) {
         />
       </div>
       <div className="form-group">
-        <label>New Password</label>
+        <label>Nueva Contraseña</label>
         <input
           type="password"
           value={newPass}
@@ -81,7 +65,7 @@ export function ChangePasswordForm({ onSave, onCancel }) {
         />
       </div>
       <div className="form-group">
-        <label>Confirm New Password</label>
+        <label>Confirmar Nueva Contraseña</label>
         <input
           type="password"
           value={confirmPass}
@@ -92,10 +76,10 @@ export function ChangePasswordForm({ onSave, onCancel }) {
       {error && <div className="form-error">{error}</div>}
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save"}
+          {loading ? "Guardando..." : "Guardar"}
         </button>
         <button className="btn-secondary" type="button" onClick={onCancel}>
-          Cancel
+          Cancelar
         </button>
       </div>
     </form>

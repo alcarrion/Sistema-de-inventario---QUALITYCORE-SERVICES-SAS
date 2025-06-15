@@ -1,6 +1,5 @@
 // src/pages/DashboardPage.js
 import React, { useState } from "react";
-import Sidebar from "../components/Sidebar";
 import UserProfile from "../components/UserProfile";
 import Modal from "../components/Modal";
 import EditProfileForm from "../components/EditProfileForm";
@@ -58,19 +57,8 @@ export default function DashboardPage() {
     setShowAdd(false);
   };
 
-  // Logout
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    window.location.href = "/";
-  };
-
   return (
     <div className="dashboard-root">
-      <Sidebar
-        user={user}
-        onLogout={handleLogout}
-        onShowPerfil={() => setShowProfile(true)}
-      />
       <main className="dashboard-main">
         {showProfile ? (
           <>

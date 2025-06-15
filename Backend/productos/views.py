@@ -3,9 +3,11 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, generics, permissions
-from .serializers import UserSerializer
-from .models import Usuario
+from rest_framework import status, generics, permissions,viewsets
+from rest_framework.permissions import BasePermission
+from .serializers import UserSerializer, ClienteSerializer, ProveedorSerializer, ProductoSerializer, CategoriaSerializer
+from .models import Usuario, Cliente, Proveedor, Producto, Categoria
+
 
 User = get_user_model()
 
@@ -14,13 +16,19 @@ class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
         password = request.data.get('password')
-        # Nota: Si tu modelo de usuario tiene USERNAME_FIELD = 'email'
         user = authenticate(request, username=email, password=password)
         if user:
+            # ⬇️ Verifica si el usuario está inactivo
+            if not user.is_active:
+                return Response(
+                    {'message': 'Usuario inactivo. Contacta al administrador.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
             login(request, user)
             serializer = UserSerializer(user)
             return Response({'message': 'Login exitoso', 'user': serializer.data})
         return Response({'message': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 # --- RECUPERAR CONTRASEÑA (EMAIL LINK) ---
 class ForgotPasswordView(APIView):
@@ -52,6 +60,8 @@ class ForgotPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'message': 'No existe un usuario con ese correo.'}, status=status.HTTP_400_BAD_REQUEST)
 
+
+
 # --- RESETEAR CONTRASEÑA (después de hacer click en el enlace del email) ---
 class ResetPasswordView(APIView):
     def post(self, request):
@@ -70,23 +80,21 @@ class ResetPasswordView(APIView):
             return Response({'message': 'Usuario no encontrado'}, status=status.HTTP_400_BAD_REQUEST)
 
 # --- LISTAR/CREAR USUARIOS (solo admin normalmente) ---
+class IsAdministrador(BasePermission):
+    def has_permission(self, request, view):
+        print(f"CHECKING has_permission")
+        return request.user and request.user.is_authenticated and request.user.rol == "Administrador"
+    
 class UsuarioListCreateView(generics.ListCreateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAdminUser]  # Solo admins pueden crear/consultar
+    permission_classes = [IsAdministrador]  # Solo admins pueden crear/consultar
 
 # --- EDITAR PERFIL DE USUARIO ---
 class UsuarioDetailView(generics.RetrieveUpdateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    # Si quieres que solo el usuario pueda editar su perfil, usa:
-    # def get_object(self):
-    #     obj = super().get_object()
-    #     if self.request.user != obj:
-    #         raise PermissionDenied("No puedes editar otro usuario.")
-    #     return obj
+    permission_classes = [IsAdministrador]
 
 # --- CAMBIAR CONTRASEÑA DESDE PERFIL ---
 class ChangePasswordView(APIView):
@@ -101,3 +109,89 @@ class ChangePasswordView(APIView):
         user.set_password(new_password)
         user.save()
         return Response({'message': 'Contraseña cambiada correctamente'}, status=status.HTTP_200_OK)
+
+
+
+
+# --- CLIENTES ---
+class ClienteListCreateView(generics.ListCreateAPIView):
+    queryset = Cliente.objects.filter(deleted_at__isnull=True)
+    serializer_class = ClienteSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins crear
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden crear clientes.")
+        serializer.save()
+
+class ClienteDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Cliente.objects.all()
+    serializer_class = ClienteSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins edit
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden editar/eliminar clientes.")
+        serializer.save()
+
+
+
+# --- PROVEEDORES ---
+class ProveedorListCreateView(generics.ListCreateAPIView):
+    queryset = Proveedor.objects.filter(deleted_at__isnull=True)
+    serializer_class = ProveedorSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins crear
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden crear proveedores.")
+        serializer.save()
+
+class ProveedorDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Proveedor.objects.all()
+    serializer_class = ProveedorSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins edit
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden editar/eliminar proveedores.")
+        serializer.save()
+
+
+# --- PRODUCTOS ---
+class ProductoListCreateView(generics.ListCreateAPIView):
+    queryset = Producto.objects.filter(deleted_at__isnull=True)
+    serializer_class = ProductoSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins crear
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden crear productos.")
+        serializer.save()
+
+class ProductoDetailView(generics.RetrieveUpdateAPIView):
+    queryset = Producto.objects.all()
+    serializer_class = ProductoSerializer
+    permission_classes = [permissions.IsAuthenticated]  # Todos pueden ver, solo admins edit
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.rol != "Administrador":
+            raise PermissionDenied("Solo administradores pueden editar/eliminar productos.")
+        serializer.save()
+
+
+
+# --- CATEGORIAS ---
+class CategoriaListCreateView(generics.ListCreateAPIView):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer
+
+class CategoriaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = Categoria.objects.all()
+    serializer_class = CategoriaSerializer

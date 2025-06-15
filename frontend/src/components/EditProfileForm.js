@@ -1,22 +1,6 @@
 // src/components/EditProfileForm.js
 import React, { useState } from "react";
-import { API_URL } from "../services/api";
-
-// Función para obtener el CSRF token de las cookies
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + "=")) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+import { API_URL, getCookie } from "../services/api";
 
 export default function EditProfileForm({ user, onSave, onCancel }) {
   const [nombre, setNombre] = useState(user.nombre);
@@ -61,22 +45,22 @@ export default function EditProfileForm({ user, onSave, onCancel }) {
 
   return (
     <form className="custom-form" onSubmit={handleSubmit}>
-      <div className="form-title">Edit Profile</div>
+      <div className="form-title">Editar Perfil</div>
       <div className="form-group">
-        <label>Name</label>
+        <label>Nombre</label>
         <input value={nombre} onChange={e => setNombre(e.target.value)} required />
       </div>
       <div className="form-group">
-        <label>Phone</label>
+        <label>Teléfono</label>
         <input value={telefono} onChange={e => setTelefono(e.target.value)} />
       </div>
       {error && <div className="form-error">{error}</div>}
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Save"}
+          {loading ? "Guardando..." : "Guardar"}
         </button>
         <button className="btn-secondary" type="button" onClick={onCancel}>
-          Cancel
+          Cancelar
         </button>
       </div>
     </form>

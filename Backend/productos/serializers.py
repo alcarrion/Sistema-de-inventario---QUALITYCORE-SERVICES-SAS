@@ -1,4 +1,4 @@
-from .models import Usuario
+from .models import Usuario, Cliente, Proveedor, Producto, Categoria
 from rest_framework import serializers
 
 class UserSerializer(serializers.ModelSerializer):
@@ -6,7 +6,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['id', 'email', 'nombre', 'rol', 'telefono', 'created_at', 'updated_at', 'password']
+        fields = ['id', 'email', 'nombre', 'rol', 'telefono', 'created_at', 'updated_at', 'password', 'is_active']
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
@@ -25,3 +25,28 @@ class UserSerializer(serializers.ModelSerializer):
             instance.set_password(password)
         instance.save()
         return instance
+
+
+
+class ClienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Cliente
+        fields = '__all__'
+
+
+class ProveedorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Proveedor
+        fields = '__all__'
+
+
+
+class ProductoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Producto
+        fields = '__all__'
+
+class CategoriaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Categoria
+        fields = '__all__'

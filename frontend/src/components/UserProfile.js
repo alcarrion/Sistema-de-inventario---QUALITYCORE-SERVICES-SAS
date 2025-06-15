@@ -8,22 +8,17 @@ export default function UserProfile({
   return (
     <div className="profile-container">
       <button className="back-btn" onClick={onClose}>←</button>
-      <h2>MY PROFILE</h2>
+      <h2>Mi Perfil</h2>
       <div className="profile-info">
         <div className="profile-avatar">{user?.nombre?.[0]?.toUpperCase() || "U"}</div>
-        <div><strong>NAME:</strong> {user?.nombre}</div>
-        <div><strong>EMAIL:</strong> {user?.email}</div>
-        <div><strong>PHONE:</strong> {user?.telefono}</div>
-        <div><strong>ROLE:</strong> {user?.rol}</div>
+        <div><strong>Nombre:</strong> {user?.nombre}</div>
+        <div><strong>Correo:</strong> {user?.email}</div>
+        <div><strong>Teléfono:</strong> {user?.telefono}</div>
+        <div><strong>ROL:</strong> {user?.rol}</div>
       </div>
       <div className="profile-actions">
-        <button className="btn-edit-profile" onClick={onEditProfile}>EDIT PROFILE</button>
-        <button className="btn-change-password" onClick={onChangePassword}>CHANGE PASSWORD</button>
-        {user?.rol === "Administrador" && (
-          <button className="btn-add-user" onClick={onAddUser}>
-            ADD NEW USER
-          </button>
-        )}
+        <button className="btn-edit-profile" onClick={onEditProfile}>EDITAR PERFIL</button>
+        <button className="btn-change-password" onClick={onChangePassword}>CAMBIAR CONTRASEÑA</button>
       </div>
     </div>
   );

@@ -8,8 +8,15 @@ export default function Modal({ children, onClose }) {
       background: "rgba(0,0,0,0.18)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 2000
     }}>
       <div style={{
-        background: "#fff", borderRadius: 16, boxShadow: "0 8px 32px #0002",
-        padding: 28, minWidth: 320, maxWidth: "98vw", position: "relative"
+        background: "#fff",
+        borderRadius: 16,
+        boxShadow: "0 8px 32px #0002",
+        padding: 28,
+        minWidth: 320,
+        maxWidth: "98vw",
+        maxHeight: "90vh",        // <<--- IMPORTANTE
+        overflowY: "auto",        // <<--- IMPORTANTE
+        position: "relative"
       }}>
         <button
           onClick={onClose}

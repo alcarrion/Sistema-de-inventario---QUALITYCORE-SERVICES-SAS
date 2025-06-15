@@ -1,7 +1,8 @@
 // src/components/Sidebar.js
 import React from "react";
+import { NavLink } from "react-router-dom";
 import {
-  LayoutDashboard, Box, BarChart2, FileText, Users,
+  LayoutDashboard, Box, BarChart2, Users,
   User, DollarSign, Truck, LogOut
 } from "lucide-react";
 import "../App.css";
@@ -14,20 +15,23 @@ export default function Sidebar({ user, onLogout, onShowPerfil }) {
         <span>CoreQuality<br /><span className="sidebar-sub">Services</span></span>
       </div>
       <nav className="sidebar-nav">
-        <a className="active"><LayoutDashboard size={20}/> Dashboard</a>
-        <a><Box size={20}/> Inventario</a>
-        <a><Truck size={20}/> Movimientos</a>
-        <a><BarChart2 size={20}/> Reportes</a>
-        <a><Users size={20}/> Proveedores</a>
-        <a><User size={20}/> Clientes</a>
-        <a><DollarSign size={20}/> Cotización</a>
+        <NavLink to="/dashboard" className={({isActive}) => isActive ? "active" : ""}><LayoutDashboard size={20}/> Dashboard</NavLink>
+        <NavLink to="/products"><Box size={20}/> Inventario</NavLink>
+        <NavLink to="/transactions"><Truck size={20}/> Movimientos</NavLink>
+        <NavLink to="/reports"><BarChart2 size={20}/> Reportes</NavLink>
+        <NavLink to="/suppliers"><Users size={20}/> Proveedores</NavLink>
+        <NavLink to="/customers"><User size={20}/> Clientes</NavLink>
+        <NavLink to="/quotation"><DollarSign size={20}/> Cotización</NavLink>
+        {/* <NavLink to="/users"><Users size={20}/> Usuarios</NavLink> */}
+        {user?.rol === "Administrador" && (
+          <NavLink to="/users"><Users size={20}/> Usuarios</NavLink>
+        )}
       </nav>
       <div style={{ flex: 4 }} />
-      {/* BLOQUE USUARIO + LOGOUT */}
       <div className="sidebar-user">
         <div
           className="sidebar-user-info clickable"
-          onClick={onShowPerfil}
+          onClick={() => window.location.href = "/profile"}
           style={{ cursor: "pointer" }}
         >
           <div className="sidebar-user-avatar">

@@ -1,7 +1,7 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
-
-from django.contrib.auth.models import BaseUserManager
+from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.core.validators import RegexValidator
+from django.utils import timezone
 
 class UsuarioManager(BaseUserManager):
     use_in_migrations = True
@@ -27,30 +27,58 @@ class UsuarioManager(BaseUserManager):
 
         return self.create_user(email, password, **extra_fields)
 
-    
 class Usuario(AbstractUser):
     username = None  # Elimina el username
     email = models.EmailField('email address', unique=True)
-    # Tus campos extra
     nombre = models.CharField(max_length=100)
-    rol = models.CharField(max_length=50)
-    telefono = models.CharField(max_length=20, blank=True)
+
+    # Agrega los choices para rol
+    ROL_CHOICES = [
+        ('Administrador', 'Administrador'),
+        ('Usuario', 'Usuario'),
+    ]
+    rol = models.CharField(max_length=50, choices=ROL_CHOICES)
+
+    # Agrega la validación de teléfono
+    telefono = models.CharField(
+        max_length=10,
+        blank=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{10}$',
+                message='El teléfono debe tener exactamente 10 dígitos.',
+                code='invalid_telefono'
+            )
+        ]
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nombre', 'rol']  # El orden importa poco, aquí los campos extra que sí o sí pides al registrar
+    REQUIRED_FIELDS = ['nombre', 'rol']
 
     objects = UsuarioManager()
-    
+
     def __str__(self):
         return self.email
 
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100)
+    correo = models.EmailField(max_length=100, blank=True, null=True)
     RUC = models.CharField(max_length=20)
-    contacto = models.CharField(max_length=100, blank=True, null=True)
+    telefono = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{10}$',
+                message='El teléfono debe tener exactamente 10 dígitos.',
+                code='invalid_telefono'
+            )
+        ]
+    )
     direccion = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -61,8 +89,20 @@ class Proveedor(models.Model):
 
 class Cliente(models.Model):
     nombre = models.CharField(max_length=100)
+    correo = models.EmailField(max_length=100, blank=True, null=True)
     cedulaRUC = models.CharField(max_length=20)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
+    telefono = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{10}$',
+                message='El teléfono debe tener exactamente 10 dígitos.',
+                code='invalid_telefono'
+            )
+        ]
+    )
     direccion = models.CharField(max_length=255, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -70,16 +110,25 @@ class Cliente(models.Model):
 
     def __str__(self):
         return self.nombre
-
+    
+class Categoria(models.Model):
+    nombre = models.CharField(max_length=50, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    def __str__(self):
+        return self.nombre
+    
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
-    categoria = models.CharField(max_length=50, blank=True, null=True)
+    categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, related_name='productos')
     precio = models.DecimalField(max_digits=10, decimal_places=2)
     stockActual = models.IntegerField()
     stockMinimo = models.IntegerField()
     estado = models.CharField(max_length=50)
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='productos')
+    imagen = models.ImageField(upload_to="productos/", null=True, blank=True)  # <-- NUEVO!
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)

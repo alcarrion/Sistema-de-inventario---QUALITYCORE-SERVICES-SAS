@@ -1,7 +1,7 @@
 // src/services/api.js
 export const API_URL = process.env.REACT_APP_API_URL;
 
-function getCookie(name) {
+export function getCookie(name) {
   let cookieValue = null;
   if (document.cookie && document.cookie !== "") {
     const cookies = document.cookie.split(";");

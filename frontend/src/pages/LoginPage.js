@@ -5,9 +5,7 @@ import ForgotPasswordForm from "../components/ForgotPasswordForm";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 
-
-
-export default function LoginPage() {
+export default function LoginPage({ setUsuario }) {
   const [showForgot, setShowForgot] = useState(false);
   const [message, setMessage] = useState("");
   const navigate = useNavigate();
@@ -29,7 +27,7 @@ export default function LoginPage() {
         </div>
         {!showForgot ? (
           <>
-            <LoginForm setMessage={setMessage} navigate={navigate} />
+            <LoginForm setMessage={setMessage} navigate={navigate} setUsuario={setUsuario} />
             <span className="link" onClick={() => setShowForgot(true)}>
               ¿Olvidaste tu contraseña?
             </span>

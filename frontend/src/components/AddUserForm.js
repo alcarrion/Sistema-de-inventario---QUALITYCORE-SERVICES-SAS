@@ -1,22 +1,6 @@
 // src/components/AddUserForm.js
 import React, { useState } from "react";
-import { API_URL } from "../services/api";
-
-// Función para obtener el CSRF token de las cookies
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
+import { API_URL, getCookie } from "../services/api";
 
 export function AddUserForm({ onSave, onCancel }) {
   const [nombre, setNombre] = useState("");
@@ -76,37 +60,37 @@ export function AddUserForm({ onSave, onCancel }) {
 
   return (
     <form className="custom-form" onSubmit={handleSubmit}>
-      <div className="form-title">Add New User</div>
+      <div className="form-title">Añadir nuevo usuario</div>
       <div className="form-group">
-        <label>Name</label>
+        <label>Nombre</label>
         <input value={nombre} onChange={e => setNombre(e.target.value)} required />
       </div>
       <div className="form-group">
-        <label>Email</label>
+        <label>Correo</label>
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
       </div>
       <div className="form-group">
-        <label>Phone</label>
+        <label>Teléfono</label>
         <input value={telefono} onChange={e => setTelefono(e.target.value)} />
       </div>
       <div className="form-group">
-        <label>Role</label>
+        <label>Rol</label>
         <select value={rol} onChange={e => setRol(e.target.value)}>
-          <option value="Usuario">User</option>
-          <option value="Administrador">Admin</option>
+          <option value="Usuario">Usuario</option>
+          <option value="Administrador">Administrador</option>
         </select>
       </div>
       <div className="form-group">
-        <label>Password</label>
+        <label>Contraseña</label>
         <input type="password" value={password} onChange={e => setPassword(e.target.value)} required />
       </div>
       {error && <div className="form-error">{error}</div>}
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>
-          {loading ? "Saving..." : "Add"}
+          {loading ? "Guradando..." : "Añadir"}
         </button>
         <button className="btn-secondary" type="button" onClick={onCancel}>
-          Cancel
+          Cancelar
         </button>
       </div>
     </form>

@@ -1,0 +1,133 @@
+// src/pages/CustomersPage.js
+import React, { useState, useEffect } from "react";
+import Modal from "../components/Modal";
+import { API_URL, getCookie } from "../services/api"; // asegúrate de tener getCookie
+import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa"; // Usa react-icons para los íconos
+import AddCustomerForm from "../components/AddCustomerForm";
+import EditCustomerForm from "../components/EditCustomerForm";
+
+export default function CustomersPage({ user }) {
+  const currentUser = user || JSON.parse(localStorage.getItem("user"));
+  const [clientes, setClientes] = useState([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [editingCliente, setEditingCliente] = useState(null);
+  const [search, setSearch] = useState("");
+
+  // Solo admins pueden añadir/editar/eliminar
+  const isAdmin = currentUser?.rol === "Administrador";
+
+  // Cargar clientes
+  useEffect(() => {
+    fetch(`${API_URL}/customers/`, { credentials: "include" })
+      .then(res => res.json())
+      .then(data => setClientes(data.filter(c => !c.deleted_at)))
+      .catch(() => setClientes([]));
+  }, [showAdd, showEdit]);
+
+  // Filtrar clientes por búsqueda
+  const filtered = clientes.filter(c =>
+    c.nombre.toLowerCase().includes(search.toLowerCase())
+    || (c.cedulaRUC && c.cedulaRUC.includes(search))
+    || (c.telefono && c.telefono.includes(search))
+    || (c.correo && c.correo.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  // Eliminar (soft-delete)
+  const handleDelete = (cliente) => {
+    if (!window.confirm("¿Seguro que deseas eliminar este cliente?")) return;
+    fetch(`${API_URL}/clientes/${cliente.id}/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      credentials: "include",
+      body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+    })
+      .then(res => res.json())
+      .then(() => setClientes(prev => prev.filter(c => c.id !== cliente.id)));
+  };
+
+  // Render
+  return (
+    <div className="customers-page-container">
+      <div className="customers-header">
+        <button className="back-btn" onClick={() => window.history.back()}>
+          ←
+        </button>
+        <h2>CLIENTES</h2>
+      </div>
+      <div className="customers-actions">
+        <div className="search-bar">
+          <FaSearch />
+          <input
+            placeholder="Buscar clientes..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+        </div>
+        {isAdmin && (
+          <button className="btn-add-customer" onClick={() => setShowAdd(true)}>
+            <FaPlus /> AÑADIR CLIENTES
+          </button>
+        )}
+      </div>
+
+      <div className="customers-list">
+        {filtered.map(cliente => (
+          <div key={cliente.id} className="customer-card">
+            <div><strong>NOMBRE:</strong> {cliente.nombre}</div>
+            <div><strong>CORREO:</strong> {cliente.correo || "-"}</div>
+            <div><strong>TELÉFONO:</strong> {cliente.telefono || "-"}</div>
+            <div><strong>CÉDULA:</strong> {cliente.cedulaRUC || "-"}</div>
+            {isAdmin && (
+              <div className="customer-actions">
+                <button
+                  className="btn-icon"
+                  onClick={() => {
+                    setEditingCliente(cliente);
+                    setShowEdit(true);
+                  }}
+                >
+                  <FaEdit />
+                </button>
+                <button className="btn-icon btn-delete" onClick={() => handleDelete(cliente)}>
+                  <FaTrash />
+                </button>
+              </div>
+            )}
+          </div>
+        ))}
+        {filtered.length === 0 && (
+          <div className="no-data">No hay clientes para mostrar.</div>
+        )}
+      </div>
+
+      {showAdd && (
+        <Modal onClose={() => setShowAdd(false)}>
+          <AddCustomerForm
+            onSave={() => setShowAdd(false)}
+            onCancel={() => setShowAdd(false)}
+          />
+        </Modal>
+      )}
+
+      {showEdit && editingCliente && (
+        <Modal onClose={() => { setShowEdit(false); setEditingCliente(null); }}>
+          <EditCustomerForm
+            cliente={editingCliente}
+            onSave={() => {
+              setShowEdit(false);
+              setEditingCliente(null);
+            }}
+            onCancel={() => {
+              setShowEdit(false);
+              setEditingCliente(null);
+            }}
+          />
+        </Modal>
+      )}
+    </div>
+  );
+}

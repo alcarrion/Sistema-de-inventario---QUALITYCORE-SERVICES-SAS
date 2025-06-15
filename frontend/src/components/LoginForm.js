@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { loginUser } from "../services/api";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 
-export default function LoginForm({ setMessage, navigate }) {
+export default function LoginForm({ setMessage, navigate, setUsuario }) { // <--- AGREGA setUsuario
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
@@ -17,6 +17,7 @@ export default function LoginForm({ setMessage, navigate }) {
     setMessage(result.message);
     if (result.ok) {
       localStorage.setItem("user", JSON.stringify(result.user));
+      setUsuario(result.user); // <--- ACTUALIZA el estado global del usuario
       navigate("/dashboard");
     }
     setLoading(false);
