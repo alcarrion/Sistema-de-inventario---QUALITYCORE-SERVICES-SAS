@@ -1,4 +1,4 @@
-from .models import Usuario, Cliente, Proveedor, Producto, Categoria
+from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte
 from rest_framework import serializers
 
 class UserSerializer(serializers.ModelSerializer):
@@ -50,3 +50,16 @@ class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
         fields = '__all__'
+
+class MovimientoSerializer(serializers.ModelSerializer):
+    producto_nombre = serializers.CharField(source='producto.nombre', read_only=True)
+
+    class Meta:
+        model = Movimiento
+        fields = ['id', 'tipoMovimiento', 'fecha', 'cantidad', 'producto', 'producto_nombre']
+
+class ReporteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Reporte
+        fields = ['id', 'archivo', 'fecha_generacion', 'usuario']
+        read_only_fields = ['usuario']

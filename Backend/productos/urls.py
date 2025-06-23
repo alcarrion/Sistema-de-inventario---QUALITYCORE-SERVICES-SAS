@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import LoginView, ForgotPasswordView, ResetPasswordView, UsuarioListCreateView, UsuarioDetailView, ChangePasswordView, ClienteListCreateView, ClienteDetailView, ProveedorListCreateView, ProveedorDetailView, ProductoListCreateView, ProductoDetailView, CategoriaListCreateView, CategoriaDetailView
+from .views import LoginView, ForgotPasswordView, ResetPasswordView, UsuarioListCreateView, UsuarioDetailView, ChangePasswordView, ClienteListCreateView, ClienteDetailView, ProveedorListCreateView, ProveedorDetailView, ProductoListCreateView, ProductoDetailView, CategoriaListCreateView, CategoriaDetailView, MovimientoListCreateView, ReporteListView,  GenerarReportePDFView
 
 urlpatterns = [
     path('login/', LoginView.as_view()),
@@ -23,4 +23,11 @@ urlpatterns = [
 
     path('categories/', CategoriaListCreateView.as_view()),
     path('categories/<int:pk>/', CategoriaDetailView.as_view()),
+
+    path('movimientos/', MovimientoListCreateView.as_view()),
+
+    path('reportes/generar/', GenerarReportePDFView.as_view()),
+    path('reportes/', ReporteListView.as_view()),  # ← para historial
+
+
 ]

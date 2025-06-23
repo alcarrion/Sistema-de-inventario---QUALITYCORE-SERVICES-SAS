@@ -183,3 +183,11 @@ class ProductoCotizado(models.Model):
 
     def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre} en cotización {self.cotizacion.id}"
+
+class Reporte(models.Model):
+    archivo = models.FileField(upload_to='reportes/')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    fecha_generacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reporte de {self.usuario.nombre} el {self.fecha_generacion.strftime('%Y-%m-%d %H:%M')}"
