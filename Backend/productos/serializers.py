@@ -1,4 +1,4 @@
-from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte
+from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte, ProductoCotizado, Cotizacion
 from rest_framework import serializers
 
 class UserSerializer(serializers.ModelSerializer):
@@ -63,3 +63,24 @@ class ReporteSerializer(serializers.ModelSerializer):
         model = Reporte
         fields = ['id', 'archivo', 'fecha_generacion', 'usuario']
         read_only_fields = ['usuario']
+
+class ProductoCotizadoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductoCotizado
+        fields = ['producto', 'cantidad', 'precioUnitario', 'subtotal']
+
+class CotizacionSerializer(serializers.ModelSerializer):
+    productos_cotizados = ProductoCotizadoSerializer(many=True)
+
+    class Meta:
+        model = Cotizacion
+        fields = ['id', 'fecha', 'subtotal', 'iva', 'total', 'cliente', 'usuario', 'productos_cotizados']
+
+    def create(self, validated_data):
+        productos_data = validated_data.pop('productos_cotizados')
+        cotizacion = Cotizacion.objects.create(**validated_data)
+
+        for prod in productos_data:
+            ProductoCotizado.objects.create(cotizacion=cotizacion, **prod)
+
+        return cotizacion

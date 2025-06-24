@@ -89,3 +89,37 @@ export async function getProductos() {
   });
   return await res.json();
 }
+
+// Obtener lista de clientes
+export async function getClientes() {
+  const res = await fetch(`${API_URL}/customers/`, {
+    credentials: "include"
+  });
+  return await res.json();
+}
+
+// Crear nueva cotización
+export async function postCotizacion(data) {
+  const csrftoken = getCookie("csrftoken");
+  const res = await fetch(`${API_URL}/cotizaciones/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrftoken
+    },
+    credentials: "include",
+    body: JSON.stringify(data)
+  });
+  const result = await res.json();
+  return { ok: res.ok, ...result };
+}
+
+// Generar PDF de una cotización por ID
+export async function getCotizacionPDF(cotizacionId) {
+  const res = await fetch(`${API_URL}/cotizaciones/${cotizacionId}/pdf/`, {
+    method: "GET",
+    credentials: "include"
+  });
+  const result = await res.json();
+  return { ok: res.ok, ...result };
+}

@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import LoginView, ForgotPasswordView, ResetPasswordView, UsuarioListCreateView, UsuarioDetailView, ChangePasswordView, ClienteListCreateView, ClienteDetailView, ProveedorListCreateView, ProveedorDetailView, ProductoListCreateView, ProductoDetailView, CategoriaListCreateView, CategoriaDetailView, MovimientoListCreateView, ReporteListView,  GenerarReportePDFView
+from .views import LoginView, ForgotPasswordView, ResetPasswordView, UsuarioListCreateView, UsuarioDetailView, ChangePasswordView, ClienteListCreateView, ClienteDetailView, ProveedorListCreateView, ProveedorDetailView, ProductoListCreateView, ProductoDetailView, CategoriaListCreateView, CategoriaDetailView, MovimientoListCreateView, ReporteListView,  GenerarReportePDFView, GenerarCotizacionView, CotizacionListView, CotizacionDetailView, GenerarCotizacionPDFView
 
 urlpatterns = [
     path('login/', LoginView.as_view()),
@@ -28,6 +28,12 @@ urlpatterns = [
 
     path('reportes/generar/', GenerarReportePDFView.as_view()),
     path('reportes/', ReporteListView.as_view()),  # ← para historial
+
+    path('cotizaciones/generar/', GenerarCotizacionView.as_view()),
+    path('cotizaciones/', CotizacionListView.as_view()),
+    path('cotizaciones/<int:pk>/', CotizacionDetailView.as_view()),
+    path('cotizaciones/<int:cotizacion_id>/pdf/', GenerarCotizacionPDFView.as_view(), name='cotizacion-pdf'),
+
 
 
 ]

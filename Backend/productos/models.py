@@ -161,10 +161,14 @@ class Movimiento(models.Model):
         return f"{self.tipoMovimiento} - {self.cantidad} de {self.producto.nombre}"
 
 class Cotizacion(models.Model):
-    fecha = models.DateField()
-    total = models.DecimalField(max_digits=10, decimal_places=2)
+    fecha = models.DateField(auto_now_add=True)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    iva = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # 15% del subtotal
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # subtotal + iva
+
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='cotizaciones')
     usuario = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='cotizaciones')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -172,17 +176,22 @@ class Cotizacion(models.Model):
     def __str__(self):
         return f"Cotización {self.id}"
 
+
 class ProductoCotizado(models.Model):
     cantidad = models.IntegerField()
     precioUnitario = models.DecimalField(max_digits=10, decimal_places=2)
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # NUEVO
+
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='productos_cotizados')
     cotizacion = models.ForeignKey(Cotizacion, on_delete=models.CASCADE, related_name='productos_cotizados')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.cantidad} x {self.producto.nombre} en cotización {self.cotizacion.id}"
+
 
 class Reporte(models.Model):
     archivo = models.FileField(upload_to='reportes/')

@@ -1,6 +1,7 @@
 from django.contrib.auth import authenticate, get_user_model, login
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import send_mail
+from django.db.models import Sum, F
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions, viewsets
@@ -10,9 +11,9 @@ from rest_framework.exceptions import PermissionDenied
 from .serializers import (
     UserSerializer, ClienteSerializer, ProveedorSerializer,
     ProductoSerializer, CategoriaSerializer, MovimientoSerializer,
-    ReporteSerializer  # <- NUEVO
+    ReporteSerializer, CotizacionSerializer, ProductoCotizadoSerializer  # <- NUEVO
 )
-from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte  # <- INCLUYE Reporte
+from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte, Cotizacion, ProductoCotizado  # <- INCLUYE Reporte
 
 # Para reportes PDF
 from reportlab.pdfgen import canvas
@@ -20,7 +21,10 @@ from reportlab.lib.pagesizes import letter
 from django.conf import settings
 import os
 from datetime import datetime
-from django.db.models import Sum, F
+from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
 
 
 User = get_user_model()
@@ -177,14 +181,44 @@ class CategoriaDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = CategoriaSerializer
 
 # --- MOVIMIENTOS ---
+from .models import Alerta
+from django.utils import timezone
+
 class MovimientoListCreateView(generics.ListCreateAPIView):
     queryset = Movimiento.objects.filter(deleted_at__isnull=True).order_by('-fecha')
     serializer_class = MovimientoSerializer
     permission_classes = [permissions.IsAuthenticated]
+
     def perform_create(self, serializer):
         if self.request.user.rol not in ['Administrador', 'Usuario']:
             raise PermissionDenied("No tienes permiso para registrar movimientos.")
-        serializer.save(usuario=self.request.user)
+
+        movimiento = serializer.save(usuario=self.request.user)
+
+        # Verificar si es una salida
+        if movimiento.tipoMovimiento.lower() == "salida":
+            producto = movimiento.producto
+
+            entradas = producto.movimientos.filter(tipoMovimiento="entrada").aggregate(
+                total=Sum('cantidad')
+            )['total'] or 0
+
+            salidas = producto.movimientos.filter(tipoMovimiento="salida").aggregate(
+                total=Sum('cantidad')
+            )['total'] or 0
+
+            stock_real = entradas - salidas
+
+            if stock_real < producto.stockMinimo:
+                # Verifica si ya hay una alerta activa
+                existe = producto.alertas.filter(deleted_at__isnull=True).exists()
+                if not existe:
+                    Alerta.objects.create(
+                        producto=producto,
+                        mensaje=f"El producto '{producto.nombre}' está por debajo del stock mínimo.",
+                        fechaGeneracion=timezone.now().date()
+                    )
+
 
 # --- REPORTES PDF ---
 class GenerarReportePDFView(APIView):
@@ -192,12 +226,11 @@ class GenerarReportePDFView(APIView):
 
     def post(self, request):
         user = request.user
-        tipo = request.data.get('tipo', 'movimientos')  # Por defecto genera de movimientos
+        tipo = request.data.get('tipo', 'movimientos')
 
         fecha_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"reporte_{tipo}_{fecha_actual}.pdf"
         filepath = os.path.join(settings.MEDIA_ROOT, 'reportes', filename)
-
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         c = canvas.Canvas(filepath, pagesize=letter)
@@ -220,23 +253,13 @@ class GenerarReportePDFView(APIView):
         elif tipo == 'top_vendidos':
             top = (
                 Movimiento.objects
-                .filter(tipoMovimiento='Salida')
+                .filter(tipoMovimiento='salida')  # ← minúscula por consistencia
                 .values('producto__nombre')
                 .annotate(total=Sum('cantidad'))
                 .order_by('-total')[:10]
             )
             for item in top:
                 linea = f"{item['producto__nombre']} - {item['total']} unidades vendidas"
-                c.drawString(100, y, linea)
-                y -= 20
-                if y < 100:
-                    c.showPage()
-                    y = 750
-
-        elif tipo == 'bajo_stock':
-            productos = Producto.objects.filter(stockActual__lt=F('stockMinimo'), deleted_at__isnull=True)
-            for p in productos:
-                linea = f"{p.nombre} - Stock actual: {p.stockActual}, mínimo requerido: {p.stockMinimo}"
                 c.drawString(100, y, linea)
                 y -= 20
                 if y < 100:
@@ -265,3 +288,107 @@ class ReporteListView(generics.ListAPIView):
 
     def get_queryset(self):
         return Reporte.objects.filter(usuario=self.request.user).order_by('-fecha_generacion')
+
+# --- COTIZACION ---
+class GenerarCotizacionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        data = request.data.copy()
+        productos = data.pop('productos_cotizados')
+
+        from decimal import Decimal
+        subtotal = sum(Decimal(p['precioUnitario']) * int(p['cantidad']) for p in productos)
+        iva = round(subtotal * Decimal('0.15'), 2)
+        total = subtotal + iva
+
+        data['subtotal'] = subtotal
+        data['iva'] = iva
+        data['total'] = total
+        data['usuario'] = request.user.id  # asigna automáticamente el usuario actual
+
+        serializer = CotizacionSerializer(data={**data, 'productos_cotizados': productos})
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Cotización guardada correctamente', 'cotizacion': serializer.data})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class CotizacionListView(generics.ListAPIView):
+    serializer_class = CotizacionSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.rol == "Administrador":
+            return Cotizacion.objects.filter(deleted_at__isnull=True).order_by('-fecha')
+        else:
+            return Cotizacion.objects.filter(usuario=user, deleted_at__isnull=True).order_by('-fecha')
+
+class CotizacionDetailView(generics.RetrieveAPIView):
+    queryset = Cotizacion.objects.filter(deleted_at__isnull=True)
+    serializer_class = CotizacionSerializer
+    permission_classes = [IsAuthenticated]
+
+
+class GenerarCotizacionPDFView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, cotizacion_id):
+        try:
+            cotizacion = Cotizacion.objects.get(id=cotizacion_id, deleted_at__isnull=True)
+        except Cotizacion.DoesNotExist:
+            return Response({"message": "Cotización no encontrada"}, status=status.HTTP_404_NOT_FOUND)
+
+        fecha_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"cotizacion_{cotizacion.id}_{fecha_actual}.pdf"
+        filepath = os.path.join(settings.MEDIA_ROOT, 'reportes', filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+
+        doc = SimpleDocTemplate(filepath, pagesize=letter)
+        styles = getSampleStyleSheet()
+        elements = []
+
+        # Encabezado
+        elements.append(Paragraph("COTIZACIÓN", styles['Title']))
+        elements.append(Paragraph(f"Cliente: {cotizacion.cliente.nombre}", styles['Normal']))
+        elements.append(Paragraph(f"Fecha: {cotizacion.fecha.strftime('%d/%m/%Y')}", styles['Normal']))
+        elements.append(Spacer(1, 12))
+
+        # Tabla de productos
+        data = [["Cantidad", "Producto", "Precio Unitario", "Subtotal"]]
+        for p in cotizacion.productos_cotizados.all():
+            data.append([
+                p.cantidad,
+                p.producto.nombre,
+                f"${p.precioUnitario:.2f}",
+                f"${p.subtotal:.2f}"
+            ])
+
+        table = Table(data, colWidths=[60, 200, 100, 100])
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ]))
+        elements.append(table)
+        elements.append(Spacer(1, 12))
+
+        # Totales
+        elements.append(Paragraph(f"Subtotal: ${cotizacion.subtotal:.2f}", styles['Normal']))
+        elements.append(Paragraph(f"IVA (15%): ${cotizacion.iva:.2f}", styles['Normal']))
+        elements.append(Paragraph(f"<b>Total: ${cotizacion.total:.2f}</b>", styles['Normal']))
+
+        doc.build(elements)
+
+        # Guardar reporte en modelo Reporte
+        reporte = Reporte.objects.create(
+            archivo=f"reportes/{filename}",
+            usuario=request.user
+        )
+
+        return Response({
+            "message": "PDF generado correctamente",
+            "url": f"{settings.MEDIA_URL}{reporte.archivo}"
+        })

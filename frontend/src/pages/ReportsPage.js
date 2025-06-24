@@ -1,10 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { getCookie, API_URL } from "../services/api";
+import { FileText, Download, AlertTriangle } from "lucide-react";
 
 export default function ReportsPage() {
   const [tipo, setTipo] = useState("movimientos");
   const [reporteUrl, setReporteUrl] = useState(null);
   const [mensaje, setMensaje] = useState("");
+  const [alertas, setAlertas] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/alertas/`, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => setAlertas(data))
+      .catch((err) => console.error("Error al obtener alertas", err));
+  }, []);
 
   const handleGenerar = async () => {
     const csrftoken = getCookie("csrftoken");
@@ -21,52 +36,210 @@ export default function ReportsPage() {
 
       const data = await res.json();
       if (res.ok) {
-        setReporteUrl(`http://localhost:8000${data.url}`);
+        const base = API_URL.replace("/api/productos", "");
+        setReporteUrl(`${base}${data.url}`);
         setMensaje(data.message);
       } else {
         setMensaje(data.message || "Error al generar el reporte");
       }
-    } catch (err) {
-      setMensaje("Error en la conexión con el servidor");
+    } catch {
+      setMensaje("Error al conectar con el servidor.");
     }
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-xl font-bold mb-4">Generar Reporte</h2>
+    <div className="report-bg">
+      <style>{`
+        .report-bg {
+          min-height: 100vh;
+          background: linear-gradient(135deg, #f7f5ff 0%, #e1ffe8 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-family: 'Segoe UI', 'Arial', sans-serif;
+          padding: 30px 10px;
+        }
+        .report-card {
+          background: #fff;
+          border-radius: 2.2rem;
+          box-shadow: 0 12px 40px rgba(82,60,184,0.10);
+          max-width: 440px;
+          width: 100%;
+          padding: 40px 30px 32px 30px;
+          position: relative;
+          overflow: hidden;
+        }
+        .report-title {
+          font-size: 1.6rem;
+          font-weight: bold;
+          color: #4527a0;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 4px;
+          letter-spacing: 0.5px;
+        }
+        .report-subtitle {
+          font-size: 1rem;
+          color: #555e80;
+          margin-bottom: 20px;
+        }
+        .alert-section {
+          background: #fff5e6;
+          border-left: 7px solid #f1c232;
+          border-radius: 1.1rem;
+          padding: 18px 16px;
+          margin-bottom: 1.7rem;
+        }
+        .alert-title {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: #ba7600;
+          font-weight: bold;
+          margin-bottom: 8px;
+          font-size: 1.08rem;
+        }
+        .alert-item {
+          color: #855300;
+          font-size: 1.01rem;
+          margin-left: 1.3rem;
+          margin-bottom: 2px;
+        }
+        .report-label {
+          font-weight: 600;
+          color: #614ae7;
+          margin-bottom: 8px;
+          display: block;
+        }
+        .report-select {
+          width: 100%;
+          padding: 0.9rem;
+          border: 2px solid #a5b4fc;
+          border-radius: 1rem;
+          font-size: 1.08rem;
+          background: #f4f8ff;
+          color: #3a326a;
+          margin-bottom: 10px;
+          outline: none;
+          transition: border 0.2s;
+        }
+        .report-select:focus {
+          border: 2px solid #7367f0;
+          background: #edf0fa;
+        }
+        .report-btn {
+          background: linear-gradient(90deg,#18e0a7 50%,#4d73fa 100%);
+          color: #fff;
+          font-weight: bold;
+          border: none;
+          border-radius: 2rem;
+          padding: 0.75rem 1.7rem;
+          font-size: 1.11rem;
+          margin-top: 16px;
+          margin-bottom: 4px;
+          cursor: pointer;
+          box-shadow: 0 6px 18px rgba(24,224,167,0.16);
+          display: flex;
+          align-items: center;
+          gap: 9px;
+          transition: background 0.18s, transform 0.12s;
+        }
+        .report-btn:hover {
+          background: linear-gradient(90deg, #11b985 60%, #2f52d7 100%);
+          transform: translateY(-1.5px) scale(1.04);
+        }
+        .report-msg {
+          margin-top: 1.1rem;
+          background: #e7fef8;
+          color: #117865;
+          border: 1.5px solid #3ee1af;
+          border-radius: 0.7rem;
+          padding: 0.77rem 1rem;
+          font-weight: 600;
+          font-size: 1.08rem;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        .report-pdf-link {
+          margin-top: 18px;
+          display: inline-block;
+          color: #3a5be0;
+          background: #ffe26c;
+          border-radius: 1.4rem;
+          padding: 0.77rem 1.9rem;
+          font-weight: bold;
+          text-decoration: none;
+          font-size: 1.08rem;
+          box-shadow: 0 2px 12px rgba(255,226,108,0.12);
+          transition: background 0.15s;
+        }
+        .report-pdf-link:hover {
+          background: #ffd31d;
+          color: #373513;
+        }
+        @media (max-width: 600px) {
+          .report-card { padding: 16px 5vw 16px 5vw; }
+        }
+      `}</style>
 
-      <label className="block mb-2 font-semibold">Tipo de reporte:</label>
-      <select
-        value={tipo}
-        onChange={(e) => setTipo(e.target.value)}
-        className="border p-2 rounded mb-4"
-      >
-        <option value="movimientos">Movimientos recientes</option>
-        <option value="top_vendidos">Productos más vendidos</option>
-        <option value="bajo_stock">Productos bajo stock mínimo</option>
-      </select>
-
-      <button
-        onClick={handleGenerar}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        Generar Reporte
-      </button>
-
-      {mensaje && <p className="mt-4 text-green-700">{mensaje}</p>}
-
-      {reporteUrl && (
-        <div className="mt-4">
-          <a
-            href={reporteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-700 underline"
-          >
-            Descargar PDF generado
-          </a>
+      <div className="report-card">
+        <div className="report-title">
+          <span role="img" aria-label="reporte">📄</span>
+          Generador de Reportes
         </div>
-      )}
+        <div className="report-subtitle">
+          Selecciona el tipo de reporte que deseas generar
+        </div>
+
+        {alertas.length > 0 && (
+          <div className="alert-section">
+            <div className="alert-title">
+              <span role="img" aria-label="alert">⚠️</span>
+              Productos con bajo stock:
+            </div>
+            {alertas.map((a) => (
+              <div className="alert-item" key={a.id}>
+                • <strong>{a.producto.nombre}</strong>: {a.mensaje}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <label className="report-label">Tipo de reporte:</label>
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          className="report-select"
+        >
+          <option value="movimientos">Movimientos recientes</option>
+          <option value="top_vendidos">Productos más vendidos</option>
+        </select>
+
+        <button onClick={handleGenerar} className="report-btn">
+          <span role="img" aria-label="descargar">⬇️</span> Generar Reporte PDF
+        </button>
+
+        {mensaje && (
+          <div className="report-msg">
+            <FileText size={18} /> {mensaje}
+          </div>
+        )}
+
+        {reporteUrl && (
+          <div style={{textAlign:"center"}}>
+            <a
+              href={reporteUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="report-pdf-link"
+            >
+              📥 Descargar PDF generado
+            </a>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
