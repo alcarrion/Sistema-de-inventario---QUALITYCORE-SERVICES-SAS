@@ -1,3 +1,4 @@
+// src/pages/QuotationPage.js
 import React, { useState, useEffect } from "react";
 import {
   getClientes,
@@ -7,10 +8,13 @@ import {
   getCotizacionPDF,
 } from "../services/api";
 
+import "../styles/pages/QuotationPage.css"; 
+
 export default function QuotationPage() {
   const [cliente, setCliente] = useState("");
   const [clientes, setClientes] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [observaciones, setObservaciones] = useState("");
   const [productosCotizados, setProductosCotizados] = useState([]);
   const [mensaje, setMensaje] = useState("");
   const [pdfUrl, setPdfUrl] = useState(null);
@@ -43,8 +47,17 @@ export default function QuotationPage() {
 
   const handleProductoChange = (index, field, value) => {
     const nuevos = [...productosCotizados];
-    nuevos[index][field] =
-      field === "cantidad" || field === "precioUnitario" ? Number(value) : value;
+    
+    if (field === "cantidad" || field === "precioUnitario") {
+      if (value === "") {
+        nuevos[index][field] = value; // permite borrar
+      } else {
+        value = value.replace(/^0+(?=\d)/, ""); 
+        nuevos[index][field] = Number(value);
+      }
+    } else {
+      nuevos[index][field] = value;
+    }
 
     if (field === "producto") {
       const productoObj = productos.find((p) => p.id === parseInt(value));
@@ -54,12 +67,15 @@ export default function QuotationPage() {
         nuevos[index].subtotal = Number(productoObj.precio);
       }
     } else {
-      nuevos[index].subtotal = nuevos[index].cantidad * nuevos[index].precioUnitario;
+      const cantidad = Number(nuevos[index].cantidad) || 0;
+      const precio = Number(nuevos[index].precioUnitario) || 0;
+      nuevos[index].subtotal = cantidad * precio;
     }
 
     setProductosCotizados(nuevos);
     recalcularTotales(nuevos);
   };
+
 
   const recalcularTotales = (productos) => {
     const nuevoSubtotal = productos.reduce((acc, p) => acc + p.subtotal, 0);
@@ -74,14 +90,18 @@ export default function QuotationPage() {
   const handleGuardar = async () => {
     const csrftoken = getCookie("csrftoken");
 
-    const res = await fetch(`${API_URL}/cotizaciones/generar/`, {
+    const res = await fetch(`${API_URL}/quotations/generate/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-CSRFToken": csrftoken,
       },
       credentials: "include",
-      body: JSON.stringify({ cliente, productos_cotizados: productosCotizados }),
+      body: JSON.stringify({
+        cliente,
+        productos_cotizados: productosCotizados,
+        observaciones,
+      }),
     });
 
     const data = await res.json();
@@ -92,8 +112,8 @@ export default function QuotationPage() {
       setSubtotal(0);
       setIva(0);
       setTotal(0);
+      setObservaciones(""); 
 
-      // 👇 Obtener URL del PDF desde la vista del backend
       const pdfResponse = await getCotizacionPDF(data.cotizacion.id);
       if (pdfResponse.ok && pdfResponse.url) {
         const fullUrl = API_URL.replace("/api/productos", "") + pdfResponse.url;
@@ -104,165 +124,17 @@ export default function QuotationPage() {
     }
   };
 
+  const handleVerPDF = () => {
+    setMensaje("");
+    setPdfUrl(null);
+  };
+
   return (
     <div className="cotiz-bg">
-      <style>{`
-        .cotiz-bg {
-          min-height: 100vh;
-          background: linear-gradient(135deg, #f6fff7 0%, #e6f5e9 100%);
-          padding: 30px 10px;
-          font-family: 'Segoe UI', 'Arial', sans-serif;
-        }
-        .cotiz-main {
-          max-width: 700px;
-          margin: 0 auto;
-          padding: 32px 24px;
-          background: #fff;
-          border-radius: 2rem;
-          box-shadow: 0 10px 40px rgba(68,160,92,0.12);
-        }
-        .cotiz-section {
-          background: #f4fdf6;
-          border-left: 7px solid #5ad97a;
-          padding: 28px 24px;
-          border-radius: 1.3rem;
-          margin-bottom: 32px;
-          box-shadow: 0 4px 16px rgba(68,160,92,0.06);
-        }
-        .cotiz-title {
-          display: flex;
-          align-items: center;
-          font-size: 1.6rem;
-          font-weight: bold;
-          color: #256029;
-          gap: 10px;
-          margin-bottom: 14px;
-        }
-        .cotiz-label {
-          font-weight: 600;
-          color: #2e7333;
-          margin-bottom: 5px;
-          display: block;
-        }
-        .cotiz-select, .cotiz-input {
-          width: 100%;
-          border: 2px solid #bbf7d0;
-          background: #e7fbe8;
-          border-radius: 1rem;
-          padding: 0.7rem 1.1rem;
-          font-size: 1rem;
-          margin-bottom: 6px;
-          margin-top: 3px;
-          color: #205526;
-          outline: none;
-          transition: border 0.2s;
-        }
-        .cotiz-select:focus, .cotiz-input:focus {
-          border: 2px solid #16a34a;
-          background: #f0fdf4;
-        }
-        .cotiz-btn {
-          background: linear-gradient(90deg, #10b981 60%, #2ecc71 100%);
-          color: #fff;
-          font-weight: bold;
-          border: none;
-          border-radius: 2rem;
-          padding: 0.75rem 2.1rem;
-          font-size: 1.1rem;
-          margin: 14px 0 0 0;
-          cursor: pointer;
-          box-shadow: 0 6px 16px rgba(42,196,109,0.15);
-          transition: background 0.2s;
-        }
-        .cotiz-btn:hover {
-          background: linear-gradient(90deg, #059669 70%, #16a34a 100%);
-        }
-        .cotiz-prod-list {
-          margin-top: 10px;
-        }
-        .cotiz-prod-row {
-          display: grid;
-          grid-template-columns: 2fr 1fr 1.2fr 1.2fr;
-          gap: 10px;
-          margin-bottom: 10px;
-        }
-        .cotiz-summary {
-          background: linear-gradient(93deg, #41ba6b 40%, #127436 100%);
-          color: #fff;
-          padding: 30px 20px 25px 20px;
-          border-radius: 1.5rem;
-          margin-bottom: 28px;
-          box-shadow: 0 4px 16px rgba(68,160,92,0.08);
-        }
-        .cotiz-summary h3 {
-          font-size: 1.4rem;
-          margin-bottom: 16px;
-          font-weight: bold;
-          letter-spacing: 1px;
-        }
-        .cotiz-summary-row {
-          display: flex;
-          justify-content: space-between;
-          border-bottom: 1px solid #ffffff33;
-          padding-bottom: 7px;
-          margin-bottom: 6px;
-          font-size: 1.05rem;
-        }
-        .cotiz-summary-row:last-child {
-          border-bottom: none;
-          margin-bottom: 0;
-          font-size: 1.3rem;
-          font-weight: bold;
-          padding-top: 9px;
-          color: #fdf29c;
-        }
-        .cotiz-pdf-link {
-          display: inline-block;
-          background: #ffc93c;
-          color: #2d311b;
-          padding: 0.8rem 2.3rem;
-          border-radius: 1.5rem;
-          font-weight: bold;
-          font-size: 1.09rem;
-          margin-top: 22px;
-          box-shadow: 0 3px 12px rgba(255,201,60,0.17);
-          text-decoration: none;
-          transition: background 0.2s;
-        }
-        .cotiz-pdf-link:hover {
-          background: #f0b70a;
-        }
-        .cotiz-empty {
-          color: #4e7d5e;
-          font-style: italic;
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          background: #e8f7eb;
-          padding: 18px 14px;
-          border-radius: 1rem;
-          border: 1.5px dashed #8ff3ad;
-          justify-content: center;
-        }
-        @media (max-width: 650px) {
-          .cotiz-main, .cotiz-section, .cotiz-summary {
-            padding: 18px 7px !important;
-          }
-          .cotiz-prod-row {
-            grid-template-columns: 1fr 1fr;
-            gap: 7px;
-          }
-        }
-      `}</style>
-
       <div className="cotiz-main">
-
         {/* Cliente */}
         <div className="cotiz-section">
-          <div className="cotiz-title">
-            <span role="img" aria-label="cliente">👤</span>
-            Información del Cliente
-          </div>
+          <div className="cotiz-title">👤 Información del Cliente</div>
           <label className="cotiz-label">Cliente:</label>
           <select
             value={cliente}
@@ -278,23 +150,24 @@ export default function QuotationPage() {
 
         {/* Productos Cotizados */}
         <div className="cotiz-section">
-          <div className="cotiz-title">
-            <span role="img" aria-label="box">📦</span>
-            Productos Cotizados
-          </div>
-          <button
-            onClick={handleAddProducto}
-            className="cotiz-btn"
-            type="button"
-          >
+          <div className="cotiz-title">📦 Productos Cotizados</div>
+          <button onClick={handleAddProducto} className="cotiz-btn" type="button">
             ➕ Añadir Producto
           </button>
+
+          {productosCotizados.length > 0 && (
+            <div className="cotiz-prod-header">
+              <span>Producto</span>
+              <span>Cantidad</span>
+              <span>Precio Unitario</span>
+              <span>Subtotal</span>
+              <span></span>
+            </div>
+          )}
+
           <div className="cotiz-prod-list">
             {productosCotizados.length === 0 ? (
-              <div className="cotiz-empty">
-                <span role="img" aria-label="box">📦</span>
-                No hay productos agregados
-              </div>
+              <div className="cotiz-empty">📦 No hay productos agregados</div>
             ) : (
               productosCotizados.map((item, index) => (
                 <div key={index} className="cotiz-prod-row">
@@ -314,7 +187,6 @@ export default function QuotationPage() {
                     value={item.cantidad}
                     onChange={(e) => handleProductoChange(index, "cantidad", e.target.value)}
                     className="cotiz-input"
-                    placeholder="Cantidad"
                   />
                   <input
                     type="number"
@@ -323,15 +195,25 @@ export default function QuotationPage() {
                     value={item.precioUnitario}
                     onChange={(e) => handleProductoChange(index, "precioUnitario", e.target.value)}
                     className="cotiz-input"
-                    placeholder="Precio Unitario"
                   />
                   <input
                     type="text"
                     readOnly
                     value={item.subtotal.toFixed(2)}
                     className="cotiz-input"
-                    placeholder="Subtotal"
                   />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const copia = [...productosCotizados];
+                      copia.splice(index, 1);
+                      setProductosCotizados(copia);
+                      recalcularTotales(copia);
+                    }}
+                    className="cotiz-remove-btn"
+                  >
+                    ❌
+                  </button>
                 </div>
               ))
             )}
@@ -340,10 +222,7 @@ export default function QuotationPage() {
 
         {/* Resumen */}
         <div className="cotiz-summary">
-          <h3>
-            <span role="img" aria-label="summary">💰</span>
-            Resumen de Cotización
-          </h3>
+          <h3>💰 Resumen de Cotización</h3>
           <div className="cotiz-summary-row">
             <span>📊 Subtotal:</span>
             <span>${subtotal}</span>
@@ -358,7 +237,21 @@ export default function QuotationPage() {
           </div>
         </div>
 
-        {/* Botón Guardar */}
+        {/* Observaciones */}
+        <div className="cotiz-section">
+          <div className="cotiz-title">📝 Observaciones</div>
+          <label className="cotiz-label">Comentarios u observaciones para el cliente:</label>
+          <textarea
+            value={observaciones}
+            onChange={(e) => setObservaciones(e.target.value)}
+            rows="4"
+            className="cotiz-input"
+            placeholder="Por ejemplo: Esta cotización es válida por 30 días..."
+            style={{ resize: "vertical", minHeight: "100px" }}
+          />
+        </div>
+
+        {/* Guardar */}
         <button
           onClick={handleGuardar}
           className="cotiz-btn"
@@ -380,7 +273,7 @@ export default function QuotationPage() {
           </p>
         )}
 
-        {/* PDF generado */}
+        {/* PDF */}
         {pdfUrl && (
           <div style={{ textAlign: "center" }}>
             <a
@@ -388,12 +281,12 @@ export default function QuotationPage() {
               target="_blank"
               rel="noopener noreferrer"
               className="cotiz-pdf-link"
+              onClick={handleVerPDF}
             >
               📄 Ver PDF de la Cotización
             </a>
           </div>
         )}
-
       </div>
     </div>
   );

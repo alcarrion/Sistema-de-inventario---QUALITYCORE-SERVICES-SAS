@@ -61,7 +61,7 @@ export async function forgotPassword(email) {
 
 // Obtener lista de movimientos
 export async function getMovimientos() {
-  const res = await fetch(`${API_URL}/movimientos/`, {
+  const res = await fetch(`${API_URL}/movements/`, {
     credentials: "include"
   });
   return await res.json();
@@ -70,7 +70,7 @@ export async function getMovimientos() {
 // Crear nuevo movimiento
 export async function postMovimiento(data) {
   const csrftoken = getCookie("csrftoken");
-  const res = await fetch(`${API_URL}/movimientos/`, {
+  const res = await fetch(`${API_URL}/movements/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -101,7 +101,7 @@ export async function getClientes() {
 // Crear nueva cotización
 export async function postCotizacion(data) {
   const csrftoken = getCookie("csrftoken");
-  const res = await fetch(`${API_URL}/cotizaciones/`, {
+  const res = await fetch(`${API_URL}/quotations/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -116,7 +116,7 @@ export async function postCotizacion(data) {
 
 // Generar PDF de una cotización por ID
 export async function getCotizacionPDF(cotizacionId) {
-  const res = await fetch(`${API_URL}/cotizaciones/${cotizacionId}/pdf/`, {
+  const res = await fetch(`${API_URL}/quotations/${cotizacionId}/pdf/`, {
     method: "GET",
     credentials: "include"
   });

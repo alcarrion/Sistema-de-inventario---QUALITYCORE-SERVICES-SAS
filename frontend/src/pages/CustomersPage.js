@@ -1,10 +1,11 @@
 // src/pages/CustomersPage.js
 import React, { useState, useEffect } from "react";
 import Modal from "../components/Modal";
-import { API_URL, getCookie } from "../services/api"; // asegúrate de tener getCookie
-import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa"; // Usa react-icons para los íconos
+import { API_URL, getCookie } from "../services/api"; 
+import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa"; 
 import AddCustomerForm from "../components/AddCustomerForm";
 import EditCustomerForm from "../components/EditCustomerForm";
+import "../styles/pages/CustomersPage.css"; 
 
 export default function CustomersPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));
@@ -36,7 +37,7 @@ export default function CustomersPage({ user }) {
   // Eliminar (soft-delete)
   const handleDelete = (cliente) => {
     if (!window.confirm("¿Seguro que deseas eliminar este cliente?")) return;
-    fetch(`${API_URL}/clientes/${cliente.id}/`, {
+    fetch(`${API_URL}/customers/${cliente.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

@@ -1,6 +1,8 @@
 // src/components/AddCustomerForm.js
 import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export default function AddCustomerForm({ onSave, onCancel }) {
   const [nombre, setNombre] = useState("");

@@ -5,6 +5,7 @@ import { API_URL, getCookie } from "../services/api";
 import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa";
 import AddSupplierForm from "../components/AddSupplierForm";
 import EditSupplierForm from "../components/EditSupplierForm";
+import "../styles/pages/SuppliersPage.css"; 
 
 export default function SuppliersPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));

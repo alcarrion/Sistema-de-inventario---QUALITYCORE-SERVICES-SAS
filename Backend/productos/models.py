@@ -1,8 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import RegexValidator
-from django.utils import timezone
 
+# --- Usuario ---
 class UsuarioManager(BaseUserManager):
     use_in_migrations = True
 
@@ -63,6 +63,8 @@ class Usuario(AbstractUser):
     def __str__(self):
         return self.email
 
+
+# --- Proveedor ---
 class Proveedor(models.Model):
     nombre = models.CharField(max_length=100)
     correo = models.EmailField(max_length=100, blank=True, null=True)
@@ -87,6 +89,8 @@ class Proveedor(models.Model):
     def __str__(self):
         return self.nombre
 
+
+# --- Cliente ---
 class Cliente(models.Model):
     nombre = models.CharField(max_length=100)
     correo = models.EmailField(max_length=100, blank=True, null=True)
@@ -110,7 +114,9 @@ class Cliente(models.Model):
 
     def __str__(self):
         return self.nombre
-    
+
+
+# --- Categoria ---
 class Categoria(models.Model):
     nombre = models.CharField(max_length=50, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -118,17 +124,19 @@ class Categoria(models.Model):
     deleted_at = models.DateTimeField(null=True, blank=True)
     def __str__(self):
         return self.nombre
-    
+
+
+# --- Producto ---
 class Producto(models.Model):
     nombre = models.CharField(max_length=100)
     descripcion = models.TextField(blank=True, null=True)
     categoria = models.ForeignKey(Categoria, on_delete=models.SET_NULL, null=True, blank=True, related_name='productos')
     precio = models.DecimalField(max_digits=10, decimal_places=2)
-    stockActual = models.IntegerField()
+    stockActual = models.IntegerField(default=0)
     stockMinimo = models.IntegerField()
     estado = models.CharField(max_length=50)
     proveedor = models.ForeignKey(Proveedor, on_delete=models.PROTECT, related_name='productos')
-    imagen = models.ImageField(upload_to="productos/", null=True, blank=True)  # <-- NUEVO!
+    imagen = models.ImageField(upload_to="productos/", null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -136,23 +144,35 @@ class Producto(models.Model):
     def __str__(self):
         return self.nombre
 
+
+# --- Alerta ---
 class Alerta(models.Model):
-    fechaGeneracion = models.DateField()
+    TIPO_CHOICES = [
+        ('stock_bajo', 'Stock bajo'),
+        ('stock_uno', 'Solo una unidad'),
+        ('stock_critico', 'Sin stock'),
+    ]
+
+    tipo = models.CharField(max_length=20, choices=TIPO_CHOICES, default='stock_bajo')
     mensaje = models.TextField()
-    producto = models.ForeignKey(Producto, on_delete=models.CASCADE, related_name='alertas')
+    producto = models.ForeignKey('Producto', on_delete=models.CASCADE, related_name='alertas')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return f"Alerta {self.id} de {self.producto.nombre}"
+        return f"[{self.get_tipo_display()}] {self.producto.nombre}"
 
+
+# --- Movimiento ---
 class Movimiento(models.Model):
     tipoMovimiento = models.CharField(max_length=50)
-    fecha = models.DateField()
+    fecha = models.DateTimeField()
     cantidad = models.IntegerField()
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='movimientos')
     usuario = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='movimientos')
+    stockEnMovimiento = models.IntegerField(default=0)
+    cliente = models.ForeignKey(Cliente, null=True, blank=True, on_delete=models.SET_NULL, related_name="movimientos") 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
@@ -160,11 +180,14 @@ class Movimiento(models.Model):
     def __str__(self):
         return f"{self.tipoMovimiento} - {self.cantidad} de {self.producto.nombre}"
 
+
+# --- Cotizacion ---
 class Cotizacion(models.Model):
     fecha = models.DateField(auto_now_add=True)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     iva = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # 15% del subtotal
     total = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # subtotal + iva
+    observaciones = models.TextField(blank=True, null=True)
 
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, related_name='cotizaciones')
     usuario = models.ForeignKey(Usuario, on_delete=models.PROTECT, related_name='cotizaciones')
@@ -177,10 +200,11 @@ class Cotizacion(models.Model):
         return f"Cotización {self.id}"
 
 
+# --- Producto Cotizado ---
 class ProductoCotizado(models.Model):
     cantidad = models.IntegerField()
     precioUnitario = models.DecimalField(max_digits=10, decimal_places=2)
-    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  # NUEVO
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)  
 
     producto = models.ForeignKey(Producto, on_delete=models.PROTECT, related_name='productos_cotizados')
     cotizacion = models.ForeignKey(Cotizacion, on_delete=models.CASCADE, related_name='productos_cotizados')
@@ -193,6 +217,7 @@ class ProductoCotizado(models.Model):
         return f"{self.cantidad} x {self.producto.nombre} en cotización {self.cotizacion.id}"
 
 
+# --- Reporte ---
 class Reporte(models.Model):
     archivo = models.FileField(upload_to='reportes/')
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)

@@ -1,22 +1,22 @@
 // src/pages/DashboardPage.js
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import UserProfile from "../components/UserProfile";
 import Modal from "../components/Modal";
 import EditProfileForm from "../components/EditProfileForm";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { AddUserForm } from "../components/AddUserForm";
 import { Package, DollarSign, Users, Activity, Search, Bell, Settings } from "lucide-react";
-import "../App.css";
+import { API_URL, getCookie } from "../services/api";
+import "../styles/pages/DashboardPage.css"; 
 
 export default function DashboardPage() {
-  // Estado del usuario (simulado desde localStorage, lo puedes ajustar según tu backend)
   const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || { nombre: "Usuario", rol: "Sin rol" });
   const [showProfile, setShowProfile] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [alertas, setAlertas] = useState([]);
 
-  // Simulación de datos para las tarjetas del dashboard
   const stats = [
     {
       icon: <Package size={32} color="#3475eb" />,
@@ -44,15 +44,41 @@ export default function DashboardPage() {
     },
   ];
 
-  // Acciones para los formularios (simulados, agrega aquí tu lógica real/API)
+  useEffect(() => {
+    fetch(`${API_URL}/alerts/`, {
+      method: "GET",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      credentials: "include"  
+    })
+      .then(res => res.json())
+      .then(data => setAlertas(data));
+  }, []);
+
+  const cerrarAlerta = async (id) => {
+    await fetch(`${API_URL}/alerts/${id}/`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCookie("csrftoken")
+      },
+      credentials: "include",
+      body: JSON.stringify({ deleted_at: new Date().toISOString() })
+    });
+    setAlertas(prev => prev.filter(a => a.id !== id));
+  };
+
   const handleSaveEdit = (data) => {
     setUser(data);
     setShowEdit(false);
     localStorage.setItem("user", JSON.stringify(data));
   };
+
   const handleSavePass = (oldPass, newPass) => {
     setShowPass(false);
   };
+
   const handleSaveAdd = (newUser) => {
     setShowAdd(false);
   };
@@ -103,6 +129,43 @@ export default function DashboardPage() {
                 <Settings size={22} />
               </div>
             </div>
+
+            {alertas.length > 0 && (
+              <div className="dashboard-alertas" style={{ marginBottom: "1.5rem" }}>
+                <h3 style={{ marginBottom: "0.5rem" }}>🚨 Alertas de Stock</h3>
+                <ul>
+                  {alertas.map((alerta) => (
+                    <li key={alerta.id} style={{
+                      marginBottom: "0.5rem",
+                      padding: "0.6rem",
+                      background: "#fffbe6",
+                      borderRadius: "6px",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center"
+                    }}>
+                      <div>
+                        <strong>{alerta.producto_nombre}:</strong> {alerta.mensaje}
+                      </div>
+                      <button
+                        onClick={() => cerrarAlerta(alerta.id)}
+                        style={{
+                          background: "#dc3545",
+                          color: "#fff",
+                          border: "none",
+                          padding: "0.3rem 0.7rem",
+                          borderRadius: "6px",
+                          cursor: "pointer"
+                        }}
+                      >
+                        Ocultar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             <div className="dashboard-stats">
               {stats.map((stat, i) => (
                 <div className="dashboard-card" key={i}>
@@ -115,7 +178,7 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-            {/* Widgets y más contenido abajo */}
+
             <div className="dashboard-widget">
               <div className="dashboard-widget-title">Resumen de Ventas</div>
               <div className="dashboard-widget-placeholder">

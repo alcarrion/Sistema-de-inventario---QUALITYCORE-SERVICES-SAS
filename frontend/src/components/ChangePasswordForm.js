@@ -1,6 +1,8 @@
 // src/components/ChangePasswordForm.js
 import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export function ChangePasswordForm({ onSave, onCancel }) {
   const [oldPass, setOldPass] = useState("");

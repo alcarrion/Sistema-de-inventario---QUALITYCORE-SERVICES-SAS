@@ -14,8 +14,8 @@ export default function Modal({ children, onClose }) {
         padding: 28,
         minWidth: 320,
         maxWidth: "98vw",
-        maxHeight: "90vh",        // <<--- IMPORTANTE
-        overflowY: "auto",        // <<--- IMPORTANTE
+        maxHeight: "90vh",        
+        overflowY: "auto",        
         position: "relative"
       }}>
         <button

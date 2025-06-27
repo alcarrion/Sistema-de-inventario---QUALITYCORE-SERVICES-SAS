@@ -1,6 +1,8 @@
 // src/components/AddUserForm.js
 import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export function AddUserForm({ onSave, onCancel }) {
   const [nombre, setNombre] = useState("");
@@ -26,7 +28,7 @@ export function AddUserForm({ onSave, onCancel }) {
   const csrftoken = getCookie("csrftoken");
 
   try {
-    const res = await fetch(`${API_URL}/usuarios/`, {
+    const res = await fetch(`${API_URL}/users/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

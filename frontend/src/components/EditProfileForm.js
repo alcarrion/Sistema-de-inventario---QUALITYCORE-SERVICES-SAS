@@ -1,6 +1,8 @@
 // src/components/EditProfileForm.js
 import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export default function EditProfileForm({ user, onSave, onCancel }) {
   const [nombre, setNombre] = useState(user.nombre);
@@ -23,7 +25,7 @@ export default function EditProfileForm({ user, onSave, onCancel }) {
   const csrftoken = getCookie("csrftoken");
 
   try {
-    const res = await fetch(`${API_URL}/usuarios/${user.id}/`, {
+    const res = await fetch(`${API_URL}/users/${user.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

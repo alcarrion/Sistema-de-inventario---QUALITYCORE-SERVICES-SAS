@@ -4,6 +4,7 @@ import UserProfile from "../components/UserProfile";
 import EditProfileForm from "../components/EditProfileForm";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import Modal from "../components/Modal";
+import "../styles/pages/ProfilePage.css"; 
 
 export default function ProfilePage({ user }) {
   const [showEdit, setShowEdit] = useState(false);

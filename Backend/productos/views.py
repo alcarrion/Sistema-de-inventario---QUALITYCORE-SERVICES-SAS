@@ -6,30 +6,37 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, generics, permissions, viewsets
 from rest_framework.permissions import BasePermission, IsAuthenticated
-from rest_framework.exceptions import PermissionDenied
-
-from .serializers import (
-    UserSerializer, ClienteSerializer, ProveedorSerializer,
-    ProductoSerializer, CategoriaSerializer, MovimientoSerializer,
-    ReporteSerializer, CotizacionSerializer, ProductoCotizadoSerializer  # <- NUEVO
-)
-from .models import Usuario, Cliente, Proveedor, Producto, Categoria, Movimiento, Reporte, Cotizacion, ProductoCotizado  # <- INCLUYE Reporte
-
+from rest_framework.exceptions import PermissionDenied, ValidationError
+from django.utils import timezone
 # Para reportes PDF
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from django.conf import settings
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, HRFlowable
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
 
+
+from .serializers import (
+    UserSerializer, ClienteSerializer, ProveedorSerializer,
+    ProductoSerializer, CategoriaSerializer, MovimientoSerializer,
+    ReporteSerializer, CotizacionSerializer, ProductoCotizadoSerializer, AlertaSerializer 
+)
+
+from .models import (
+    Usuario, Cliente, Proveedor, Producto, Categoria, 
+    Movimiento, Reporte, Cotizacion, ProductoCotizado, Alerta
+)  
 
 
 User = get_user_model()
 
-# --- LOGIN ---
+
+# --- Login ---
 class LoginView(APIView):
     def post(self, request):
         email = request.data.get('email')
@@ -43,7 +50,8 @@ class LoginView(APIView):
             return Response({'message': 'Login exitoso', 'user': serializer.data})
         return Response({'message': 'Credenciales incorrectas'}, status=status.HTTP_401_UNAUTHORIZED)
 
-# --- RECUPERAR CONTRASEÑA ---
+
+# --- Forgot Password ---
 class ForgotPasswordView(APIView):
     def post(self, request):
         email = request.data.get('email')
@@ -69,7 +77,8 @@ class ForgotPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'message': 'No existe un usuario con ese correo.'}, status=status.HTTP_400_BAD_REQUEST)
 
-# --- RESET PASSWORD ---
+
+# --- Reset Password ---
 class ResetPasswordView(APIView):
     def post(self, request):
         uid = request.data.get('uid')
@@ -86,12 +95,14 @@ class ResetPasswordView(APIView):
         except User.DoesNotExist:
             return Response({'message': 'Usuario no encontrado'}, status=status.HTTP_400_BAD_REQUEST)
 
-# --- ADMIN ROL CHECK ---
+
+# --- Admin Rol Check ---
 class IsAdministrador(BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.rol == "Administrador"
 
-# --- USUARIOS ---
+
+# --- Usuarios ---
 class UsuarioListCreateView(generics.ListCreateAPIView):
     queryset = Usuario.objects.all()
     serializer_class = UserSerializer
@@ -114,7 +125,8 @@ class ChangePasswordView(APIView):
         user.save()
         return Response({'message': 'Contraseña cambiada correctamente'}, status=status.HTTP_200_OK)
 
-# --- CLIENTES ---
+
+# --- Clientes ---
 class ClienteListCreateView(generics.ListCreateAPIView):
     queryset = Cliente.objects.filter(deleted_at__isnull=True)
     serializer_class = ClienteSerializer
@@ -133,7 +145,8 @@ class ClienteDetailView(generics.RetrieveUpdateAPIView):
             raise PermissionDenied("Solo administradores pueden editar clientes.")
         serializer.save()
 
-# --- PROVEEDORES ---
+
+# --- Proveedores ---
 class ProveedorListCreateView(generics.ListCreateAPIView):
     queryset = Proveedor.objects.filter(deleted_at__isnull=True)
     serializer_class = ProveedorSerializer
@@ -152,7 +165,8 @@ class ProveedorDetailView(generics.RetrieveUpdateAPIView):
             raise PermissionDenied("Solo administradores pueden editar proveedores.")
         serializer.save()
 
-# --- PRODUCTOS ---
+
+# --- Productos ---
 class ProductoListCreateView(generics.ListCreateAPIView):
     queryset = Producto.objects.filter(deleted_at__isnull=True)
     serializer_class = ProductoSerializer
@@ -171,7 +185,8 @@ class ProductoDetailView(generics.RetrieveUpdateAPIView):
             raise PermissionDenied("Solo administradores pueden editar productos.")
         serializer.save()
 
-# --- CATEGORÍAS ---
+
+# --- Categorias ---
 class CategoriaListCreateView(generics.ListCreateAPIView):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
@@ -180,12 +195,10 @@ class CategoriaDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Categoria.objects.all()
     serializer_class = CategoriaSerializer
 
-# --- MOVIMIENTOS ---
-from .models import Alerta
-from django.utils import timezone
 
+# --- Movimientos ---
 class MovimientoListCreateView(generics.ListCreateAPIView):
-    queryset = Movimiento.objects.filter(deleted_at__isnull=True).order_by('-fecha')
+    queryset = Movimiento.objects.filter(deleted_at__isnull=True).order_by("-id")
     serializer_class = MovimientoSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -193,103 +206,171 @@ class MovimientoListCreateView(generics.ListCreateAPIView):
         if self.request.user.rol not in ['Administrador', 'Usuario']:
             raise PermissionDenied("No tienes permiso para registrar movimientos.")
 
-        movimiento = serializer.save(usuario=self.request.user)
+        producto = serializer.validated_data['producto']
+        cantidad = serializer.validated_data['cantidad']
+        tipo = serializer.validated_data['tipoMovimiento'].lower()
 
-        # Verificar si es una salida
-        if movimiento.tipoMovimiento.lower() == "salida":
-            producto = movimiento.producto
+        # Validar si es salida con stock insuficiente
+        if tipo == "salida" and cantidad > producto.stockActual:
+            raise ValidationError("No hay suficiente stock para esta salida.")
 
-            entradas = producto.movimientos.filter(tipoMovimiento="entrada").aggregate(
-                total=Sum('cantidad')
-            )['total'] or 0
+        # Aplicar cambio al stock
+        if tipo == "entrada":
+            producto.stockActual += cantidad
+        elif tipo == "salida":
+            producto.stockActual -= cantidad
 
-            salidas = producto.movimientos.filter(tipoMovimiento="salida").aggregate(
-                total=Sum('cantidad')
-            )['total'] or 0
+        # Guardar el movimiento con el stock ya actualizado
+        movimiento = serializer.save(
+            usuario=self.request.user,
+            stockEnMovimiento=producto.stockActual
+        )
 
-            stock_real = entradas - salidas
+        # Verificar y crear alerta si el stock está bajo o crítico
+        if producto.stockActual <= producto.stockMinimo:
+            tipo_alerta = "stock_bajo"
+            mensaje = f"⚠️ El producto '{producto.nombre}' está por debajo del stock mínimo ({producto.stockMinimo})."
 
-            if stock_real < producto.stockMinimo:
-                # Verifica si ya hay una alerta activa
-                existe = producto.alertas.filter(deleted_at__isnull=True).exists()
-                if not existe:
-                    Alerta.objects.create(
-                        producto=producto,
-                        mensaje=f"El producto '{producto.nombre}' está por debajo del stock mínimo.",
-                        fechaGeneracion=timezone.now().date()
-                    )
+            if producto.stockActual == 1:
+                tipo_alerta = "stock_uno"
+                mensaje = f"⚠️ Solo queda 1 unidad del producto '{producto.nombre}'."
+
+            elif producto.stockActual == 0:
+                tipo_alerta = "stock_critico"
+                mensaje = f"🚨 El producto '{producto.nombre}' se ha quedado sin stock."
+
+            # Evitar alertas duplicadas activas del mismo tipo
+            existe = producto.alertas.filter(deleted_at__isnull=True, tipo=tipo_alerta).exists()
+            if not existe:
+                Alerta.objects.create(
+                    producto=producto,
+                    tipo=tipo_alerta,
+                    mensaje=mensaje
+                )
+
+        producto.save()
 
 
-# --- REPORTES PDF ---
+# # --- Reportes ---
 class GenerarReportePDFView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
-        tipo = request.data.get('tipo', 'movimientos')
+        tipo = request.data.get("tipo", "movimientos")
+        fecha_inicio = request.data.get("fecha_inicio")
+        fecha_fin = request.data.get("fecha_fin")
+
+        try:
+            fi = datetime.strptime(fecha_inicio, "%Y-%m-%d") if fecha_inicio else None
+            ff = (
+                datetime.strptime(fecha_fin, "%Y-%m-%d") + timedelta(days=1) - timedelta(seconds=1)
+                if fecha_fin else None
+            )
+        except Exception:
+            return Response({"message": "Fechas inválidas"}, status=status.HTTP_400_BAD_REQUEST)
 
         fecha_actual = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"reporte_{tipo}_{fecha_actual}.pdf"
         filepath = os.path.join(settings.MEDIA_ROOT, 'reportes', filename)
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
-        c = canvas.Canvas(filepath, pagesize=letter)
-        c.setFont("Helvetica", 12)
-        c.drawString(100, 750, f"Reporte: {tipo.upper()}")
-        c.drawString(100, 730, f"Generado por: {user.nombre}")
-        c.drawString(100, 710, f"Fecha: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        y = 680
+        doc = SimpleDocTemplate(filepath, pagesize=letter)
+        styles = getSampleStyleSheet()
 
-        if tipo == 'movimientos':
-            movimientos = Movimiento.objects.filter(deleted_at__isnull=True).order_by('-fecha')[:30]
-            for mov in movimientos:
-                linea = f"{mov.fecha} | {mov.tipoMovimiento} | {mov.producto.nombre} | {mov.cantidad}"
-                c.drawString(100, y, linea)
-                y -= 20
-                if y < 100:
-                    c.showPage()
-                    y = 750
+        # Estilos personalizados
+        styles.add(ParagraphStyle(name='TituloGrande', fontSize=20, alignment=1, spaceAfter=12))
+        styles.add(ParagraphStyle(name='Subinfo', fontSize=10, textColor=colors.gray, spaceAfter=6))
+        styles.add(ParagraphStyle(name='Nota', fontSize=9, textColor=colors.HexColor("#256029"), spaceBefore=10))
 
-        elif tipo == 'top_vendidos':
-            top = (
-                Movimiento.objects
-                .filter(tipoMovimiento='salida')  # ← minúscula por consistencia
-                .values('producto__nombre')
-                .annotate(total=Sum('cantidad'))
-                .order_by('-total')[:10]
-            )
-            for item in top:
-                linea = f"{item['producto__nombre']} - {item['total']} unidades vendidas"
-                c.drawString(100, y, linea)
-                y -= 20
-                if y < 100:
-                    c.showPage()
-                    y = 750
+        elements = []
 
-        else:
-            return Response({'message': 'Tipo de reporte no válido'}, status=status.HTTP_400_BAD_REQUEST)
+        # Línea decorativa
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc")))
 
-        c.save()
+        # Logo
+        logo_path = os.path.join(settings.BASE_DIR, "static", "images", "logo.png")
+        if os.path.exists(logo_path):
+            img = Image(logo_path, width=90, height=40)
+            img.hAlign = 'RIGHT'
+            elements.append(img)
+
+        # Título
+        elements.append(Paragraph("REPORTE DE MOVIMIENTOS", styles["TituloGrande"]))
+        elements.append(Spacer(1, 6))
+
+        # Subtítulos
+        elements.append(Paragraph(f"Generado por: {user.nombre}", styles["Subinfo"]))
+        elements.append(Paragraph(f"Fecha: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", styles["Subinfo"]))
+        elements.append(Spacer(1, 14))
+
+        # Obtener datos
+        movimientos = Movimiento.objects.filter(deleted_at__isnull=True)
+        if fi:
+            movimientos = movimientos.filter(fecha__gte=fi)
+        if ff:
+            movimientos = movimientos.filter(fecha__lte=ff)
+        movimientos = movimientos.order_by("-fecha")[:50]
+
+        # Encabezados tabla
+        data = [["Fecha", "Tipo", "Producto", "Cantidad", "Cliente / Proveedor", "Vendedor"]]
+        for m in movimientos:
+            fecha = m.fecha.strftime("%d/%m/%Y %H:%M")
+            tipo_mov = m.tipoMovimiento.title()
+            producto = m.producto.nombre
+            cantidad = str(m.cantidad)
+            relacionado = ""
+
+            if m.tipoMovimiento == "salida" and m.cliente:
+                relacionado = m.cliente.nombre
+            elif m.tipoMovimiento == "entrada" and m.producto.proveedor:
+                relacionado = m.producto.proveedor.nombre
+
+            vendedor = m.usuario.nombre if m.usuario else "N/A"
+
+            data.append([fecha, tipo_mov, producto, cantidad, relacionado, vendedor])
+
+        # Tabla con estilos
+        tabla = Table(data, colWidths=[90, 60, 120, 50, 120, 100])
+        tabla.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#4f46e5")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey]),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+            ("TOPPADDING", (0, 0), (-1, 0), 6),
+        ]))
+        elements.append(tabla)
+
+        # Nota final
+        elements.append(Spacer(1, 16))
+        elements.append(Paragraph("Este reporte contiene un máximo de 50 movimientos más recientes.", styles["Nota"]))
+
+        doc.build(elements)
 
         reporte = Reporte.objects.create(
             archivo=f"reportes/{filename}",
-            usuario=user
+            usuario=request.user
         )
 
         return Response({
-            'message': 'Reporte generado correctamente',
-            'url': f"{settings.MEDIA_URL}{reporte.archivo}"
+            "message": "Reporte generado correctamente",
+            "url": f"{settings.MEDIA_URL}{reporte.archivo}"
         })
-
 
 class ReporteListView(generics.ListAPIView):
     serializer_class = ReporteSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Reporte.objects.filter(usuario=self.request.user).order_by('-fecha_generacion')
+        return Reporte.objects.filter(usuario=self.request.user).order_by("-fecha_generacion")
+    
 
-# --- COTIZACION ---
+# --- Cotizacion ---
 class GenerarCotizacionView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -346,43 +427,82 @@ class GenerarCotizacionPDFView(APIView):
 
         doc = SimpleDocTemplate(filepath, pagesize=letter)
         styles = getSampleStyleSheet()
+
+        # Estilos personalizados
+        styles.add(ParagraphStyle(name='HeaderTitle', fontSize=22, leading=26, spaceAfter=14, alignment=1))
+        styles.add(ParagraphStyle(name='SectionLabel', fontSize=10, spaceAfter=2, textColor=colors.gray))
+        totales_style = ParagraphStyle(name='Totales', parent=styles['Normal'], fontSize=11, leading=14, textColor=colors.HexColor("#256029"), spaceAfter=4)
+        total_final_style = ParagraphStyle(name='TotalBold', parent=styles['Normal'], fontSize=12, textColor=colors.HexColor("#1f2937"), spaceBefore=5, spaceAfter=10)
+        observacion_style = ParagraphStyle(name='ObsStyle', fontSize=10, leading=12, textColor=colors.HexColor("#14532d"), spaceAfter=12)
+
         elements = []
 
-        # Encabezado
-        elements.append(Paragraph("COTIZACIÓN", styles['Title']))
-        elements.append(Paragraph(f"Cliente: {cotizacion.cliente.nombre}", styles['Normal']))
-        elements.append(Paragraph(f"Fecha: {cotizacion.fecha.strftime('%d/%m/%Y')}", styles['Normal']))
-        elements.append(Spacer(1, 12))
+        # Línea decorativa superior
+        elements.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#cccccc")))
+
+        # Logo
+        logo_path = os.path.join(settings.BASE_DIR, "static", "images", "logo.png")
+        if os.path.exists(logo_path):
+            img = Image(logo_path, width=90, height=40)
+            img.hAlign = 'RIGHT'
+            elements.append(img)
+
+        # Título
+        elements.append(Paragraph("COTIZACIÓN", styles['HeaderTitle']))
+        elements.append(Spacer(1, 8))
+
+        # Datos del cliente y fecha
+        elements.append(Paragraph(f"<b>FECHA:</b> {cotizacion.fecha.strftime('%d/%m/%Y')}", styles["Normal"]))
+        elements.append(Paragraph(f"<b>CLIENTE:</b> {cotizacion.cliente.nombre}", styles["Normal"]))
+        elements.append(Paragraph(f"<b>VENDEDOR:</b> {cotizacion.usuario.nombre}", styles["Normal"]))
+        elements.append(Spacer(1, 18))
 
         # Tabla de productos
-        data = [["Cantidad", "Producto", "Precio Unitario", "Subtotal"]]
+        data = [["PRODUCTO", "CANTIDAD", "PRECIO", "TOTAL"]]
         for p in cotizacion.productos_cotizados.all():
             data.append([
-                p.cantidad,
                 p.producto.nombre,
+                p.cantidad,
                 f"${p.precioUnitario:.2f}",
                 f"${p.subtotal:.2f}"
             ])
 
-        table = Table(data, colWidths=[60, 200, 100, 100])
+        table = Table(data, colWidths=[200, 80, 80, 80])
         table.setStyle(TableStyle([
-            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
-            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
-            ("ALIGN", (2, 1), (-1, -1), "RIGHT"),
-            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#10b981")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+            ("TOPPADDING", (0, 0), (-1, 0), 6),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey])
         ]))
         elements.append(table)
-        elements.append(Spacer(1, 12))
+        elements.append(Spacer(1, 18))
 
         # Totales
-        elements.append(Paragraph(f"Subtotal: ${cotizacion.subtotal:.2f}", styles['Normal']))
-        elements.append(Paragraph(f"IVA (15%): ${cotizacion.iva:.2f}", styles['Normal']))
-        elements.append(Paragraph(f"<b>Total: ${cotizacion.total:.2f}</b>", styles['Normal']))
+        elements.append(Paragraph(f"<b>Subtotal:</b> ${cotizacion.subtotal:.2f}", totales_style))
+        elements.append(Paragraph(f"<b>IVA (15%):</b> ${cotizacion.iva:.2f}", totales_style))
+        elements.append(Paragraph(f"<b>Total:</b> <b>${cotizacion.total:.2f}</b>", total_final_style))
+        elements.append(Spacer(1, 18))
 
+        # Observaciones
+        if cotizacion.observaciones:
+            elements.append(Paragraph("<b>OBSERVACIONES:</b>", styles['Normal']))
+            elements.append(Spacer(1, 4))
+            elements.append(Paragraph(cotizacion.observaciones, observacion_style))
+
+        # Nota final
+        elements.append(Spacer(1, 12))
+        elements.append(Paragraph("<i>⚠ Cotización válida por 30 días</i>", styles['Normal']))
+
+        # Construir PDF
         doc.build(elements)
 
-        # Guardar reporte en modelo Reporte
+        # Guardar en historial
         reporte = Reporte.objects.create(
             archivo=f"reportes/{filename}",
             usuario=request.user
@@ -392,3 +512,26 @@ class GenerarCotizacionPDFView(APIView):
             "message": "PDF generado correctamente",
             "url": f"{settings.MEDIA_URL}{reporte.archivo}"
         })
+
+
+# --- Alertas ---
+class AlertaListView(generics.ListAPIView):
+    serializer_class = AlertaSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        return Alerta.objects.filter(deleted_at__isnull=True).order_by("-created_at")
+
+    
+class AlertaUpdateView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            alerta = Alerta.objects.get(pk=pk, deleted_at__isnull=True)
+        except Alerta.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
+        alerta.deleted_at = timezone.now()
+        alerta.save()
+        return Response({"message": "Alerta oculta con éxito"})

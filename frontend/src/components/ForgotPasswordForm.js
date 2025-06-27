@@ -2,6 +2,8 @@
 import React, { useState } from "react";
 import { forgotPassword } from "../services/api";
 import { Mail } from "lucide-react";
+import "../styles/components/Form.css";
+
 
 export default function ForgotPasswordForm({ setMessage }) {
   const [email, setEmail] = useState("");

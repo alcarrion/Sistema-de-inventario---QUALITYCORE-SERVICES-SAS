@@ -59,7 +59,6 @@ function App() {
           <Route path="/customers" element={<CustomersPage />} />
           <Route path="/quotation" element={<QuotationPage />} />
           <Route path="/profile" element={<ProfilePage user={usuario} />} />
-          {/* <Route path="/users" element={<UsersPage />} /> */}
           <Route path="/users" element={<UsersPage user={usuario} />} />
         </Route>
 

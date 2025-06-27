@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Lock, CheckCircle2 } from "lucide-react";
-import "../App.css";
+import "../styles/pages/ResetPassword.css"; 
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();

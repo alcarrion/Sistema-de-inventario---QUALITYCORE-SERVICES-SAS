@@ -16,6 +16,7 @@ export default function ProductCard({ producto, onEdit, onDelete, isAdmin }) {
         <div className="product-card-info"><strong>Proveedor:</strong> {producto.proveedor_nombre || "-"}</div>
         <div className="product-card-info"><strong>Precio:</strong> ${producto.precio}</div>
         <div className="product-card-info"><strong>Stock:</strong> {producto.stockActual}</div>
+        <div className="product-card-info"><strong>Estado:</strong> {producto.estado}</div>
         {isAdmin && (
           <div className="product-card-actions">
             <button className="btn-icon" onClick={() => onEdit(producto)}>

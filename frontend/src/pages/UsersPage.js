@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Modal from "../components/Modal";
 import { AddUserForm } from "../components/AddUserForm";
-import { API_URL, getCookie } from "../services/api"; // asegúrate de exportar getCookie
+import { API_URL, getCookie } from "../services/api"; 
+import "../styles/pages/UsersPage.css";    
 
 export default function UsersPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));
@@ -12,7 +13,7 @@ export default function UsersPage({ user }) {
 
   // Cargar la lista de usuarios
   useEffect(() => {
-    fetch(`${API_URL}/usuarios/`, { credentials: "include" })
+    fetch(`${API_URL}/users/`, { credentials: "include" })
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(() => setUsers([]));
@@ -21,7 +22,7 @@ export default function UsersPage({ user }) {
   // Cambiar rol de usuario
   const handleChangeRol = (userId, nuevoRol) => {
     setLoadingId(userId);
-    fetch(`${API_URL}/usuarios/${userId}/`, {
+    fetch(`${API_URL}/users/${userId}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -45,7 +46,7 @@ export default function UsersPage({ user }) {
   // Activar/Inactivar usuario
   const handleToggleActive = (userId, isActive) => {
     setLoadingId(userId);
-    fetch(`${API_URL}/usuarios/${userId}/`, {
+    fetch(`${API_URL}/users/${userId}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

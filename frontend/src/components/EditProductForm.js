@@ -1,6 +1,8 @@
 // src/components/EditProductForm.js
 import React, { useState, useEffect } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export default function EditProductForm({ producto, onSave, onCancel }) {
   const [nombre, setNombre] = useState(producto.nombre);
@@ -11,7 +13,7 @@ export default function EditProductForm({ producto, onSave, onCancel }) {
   const [proveedor, setProveedor] = useState(producto.proveedor || "");
   const [proveedores, setProveedores] = useState([]);
   const [precio, setPrecio] = useState(producto.precio);
-  const [stockActual, setStockActual] = useState(producto.stockActual);
+  const [stockActual] = useState(producto.stockActual);
   const [stockMinimo, setStockMinimo] = useState(producto.stockMinimo);
   const [estado, setEstado] = useState(producto.estado);
   const [imagen, setImagen] = useState(null);
@@ -63,7 +65,7 @@ export default function EditProductForm({ producto, onSave, onCancel }) {
     setError("");
     setLoading(true);
 
-    if (!nombre || !precio || !stockActual || !stockMinimo || !categoria || !proveedor) {
+    if (!nombre || !precio || !stockMinimo || !categoria || !proveedor) {
       setError("Todos los campos marcados son obligatorios.");
       setLoading(false);
       return;
@@ -141,8 +143,8 @@ export default function EditProductForm({ producto, onSave, onCancel }) {
         <input type="number" min={0} value={precio} onChange={e => setPrecio(e.target.value)} required />
       </div>
       <div className="form-group">
-        <label>Stock actual *</label>
-        <input type="number" min={0} value={stockActual} onChange={e => setStockActual(e.target.value)} required />
+        <label>Stock actual</label>
+        <input type="number" value={stockActual} disabled />
       </div>
       <div className="form-group">
         <label>Stock mínimo *</label>

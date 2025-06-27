@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Box, BarChart2, Users,
   User, DollarSign, Truck, LogOut
 } from "lucide-react";
-import "../App.css";
+import "../styles/components/Sidebar.css"; 
 
 export default function Sidebar({ user, onLogout, onShowPerfil }) {
   return (
@@ -22,7 +22,6 @@ export default function Sidebar({ user, onLogout, onShowPerfil }) {
         <NavLink to="/suppliers"><Users size={20}/> Proveedores</NavLink>
         <NavLink to="/customers"><User size={20}/> Clientes</NavLink>
         <NavLink to="/quotation"><DollarSign size={20}/> Cotización</NavLink>
-        {/* <NavLink to="/users"><Users size={20}/> Usuarios</NavLink> */}
         {user?.rol === "Administrador" && (
           <NavLink to="/users"><Users size={20}/> Usuarios</NavLink>
         )}

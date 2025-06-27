@@ -6,6 +6,7 @@ import AddProductForm from "../components/AddProductForm";
 import EditProductForm from "../components/EditProductForm";
 import { API_URL, getCookie } from "../services/api";
 import { FaPlus, FaSearch } from "react-icons/fa";
+import "../styles/pages/InventoryPage.css"; 
 
 export default function InventoryPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));
@@ -19,7 +20,7 @@ export default function InventoryPage({ user }) {
   const [search, setSearch] = useState("");
 
   // Cargar productos
-  useEffect(() => {
+  const cargarProductos = () => {
     fetch(`${API_URL}/products/`, {
       credentials: "include",
       headers: {
@@ -29,7 +30,17 @@ export default function InventoryPage({ user }) {
       .then(res => res.json())
       .then(data => setProductos(data.filter(p => !p.deleted_at)))
       .catch(() => setProductos([]));
+  };
+
+  useEffect(() => {
+    cargarProductos();
   }, [showAdd, showEdit]);
+
+  useEffect(() => {
+    const handleRecargar = () => cargarProductos();
+    window.addEventListener("recargarInventario", handleRecargar);
+    return () => window.removeEventListener("recargarInventario", handleRecargar);
+  }, []);
 
   // Cargar proveedores
   useEffect(() => {
@@ -62,7 +73,6 @@ export default function InventoryPage({ user }) {
     (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(search.toLowerCase())) ||
     (p.proveedor_nombre && p.proveedor_nombre.toLowerCase().includes(search.toLowerCase()))
   );
-
 
   // Eliminar producto (soft-delete)
   const handleDelete = producto => {

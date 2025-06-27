@@ -1,6 +1,8 @@
 // src/components/EditCustomerForm.js
 import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export default function EditCustomerForm({ cliente, onSave, onCancel }) {
 

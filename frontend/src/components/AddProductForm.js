@@ -1,6 +1,8 @@
 // src/components/AddProductForm.js
 import React, { useState, useEffect } from "react";
 import { API_URL, getCookie } from "../services/api";
+import "../styles/components/Form.css";
+
 
 export default function AddProductForm({ onSave, onCancel }) {
   const [nombre, setNombre] = useState("");
@@ -11,7 +13,6 @@ export default function AddProductForm({ onSave, onCancel }) {
   const [proveedor, setProveedor] = useState("");
   const [proveedores, setProveedores] = useState([]);
   const [precio, setPrecio] = useState("");
-  const [stockActual, setStockActual] = useState("");
   const [stockMinimo, setStockMinimo] = useState("");
   const [estado, setEstado] = useState("Activo");
   const [imagen, setImagen] = useState(null);
@@ -65,7 +66,7 @@ export default function AddProductForm({ onSave, onCancel }) {
     setError("");
     setLoading(true);
 
-    if (!nombre || !precio || !stockActual || !stockMinimo || !categoria || !proveedor) {
+    if (!nombre || !precio || !stockMinimo || !categoria || !proveedor) {
       setError("Todos los campos marcados son obligatorios.");
       setLoading(false);
       return;
@@ -76,7 +77,6 @@ export default function AddProductForm({ onSave, onCancel }) {
     formData.append("descripcion", descripcion);
     formData.append("categoria", categoria);
     formData.append("precio", precio);
-    formData.append("stockActual", stockActual);
     formData.append("stockMinimo", stockMinimo);
     formData.append("estado", estado);
     formData.append("proveedor", proveedor);
@@ -141,10 +141,6 @@ export default function AddProductForm({ onSave, onCancel }) {
       <div className="form-group">
         <label>Precio *</label>
         <input type="number" min={0} value={precio} onChange={e => setPrecio(e.target.value)} required />
-      </div>
-      <div className="form-group">
-        <label>Stock actual *</label>
-        <input type="number" min={0} value={stockActual} onChange={e => setStockActual(e.target.value)} required />
       </div>
       <div className="form-group">
         <label>Stock mínimo *</label>
