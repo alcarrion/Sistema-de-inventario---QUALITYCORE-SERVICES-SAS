@@ -16,7 +16,7 @@ export default function CustomersPage({ user }) {
   const [search, setSearch] = useState("");
 
   // Solo admins pueden añadir/editar/eliminar
-  const isAdmin = currentUser?.rol === "Administrador";
+  const isAdmin = currentUser?.role === "Administrator";
 
   // Cargar clientes
   useEffect(() => {
@@ -26,15 +26,14 @@ export default function CustomersPage({ user }) {
       .catch(() => setClientes([]));
   }, [showAdd, showEdit]);
 
-  // Filtrar clientes por búsqueda
+  // Filtrar clientes por búsqueda (usando los nombres REALES del backend)
   const filtered = clientes.filter(c =>
-    c.nombre.toLowerCase().includes(search.toLowerCase())
-    || (c.cedulaRUC && c.cedulaRUC.includes(search))
-    || (c.telefono && c.telefono.includes(search))
-    || (c.correo && c.correo.toLowerCase().includes(search.toLowerCase()))
+    (c.name && c.name.toLowerCase().includes(search.toLowerCase())) ||
+    (c.tax_id && c.tax_id.includes(search)) ||
+    (c.phone && c.phone.includes(search)) ||
+    (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Eliminar (soft-delete)
   const handleDelete = (cliente) => {
     if (!window.confirm("¿Seguro que deseas eliminar este cliente?")) return;
     fetch(`${API_URL}/customers/${cliente.id}/`, {
@@ -50,7 +49,6 @@ export default function CustomersPage({ user }) {
       .then(() => setClientes(prev => prev.filter(c => c.id !== cliente.id)));
   };
 
-  // Render
   return (
     <div className="customers-page-container">
       <div className="customers-header">
@@ -78,10 +76,10 @@ export default function CustomersPage({ user }) {
       <div className="customers-list">
         {filtered.map(cliente => (
           <div key={cliente.id} className="customer-card">
-            <div><strong>NOMBRE:</strong> {cliente.nombre}</div>
-            <div><strong>CORREO:</strong> {cliente.correo || "-"}</div>
-            <div><strong>TELÉFONO:</strong> {cliente.telefono || "-"}</div>
-            <div><strong>CÉDULA:</strong> {cliente.cedulaRUC || "-"}</div>
+            <div><strong>NOMBRE:</strong> {cliente.name || "-"}</div>
+            <div><strong>CORREO:</strong> {cliente.email || "-"}</div>
+            <div><strong>TELÉFONO:</strong> {cliente.phone || "-"}</div>
+            <div><strong>CÉDULA:</strong> {cliente.document || "-"}</div>
             {isAdmin && (
               <div className="customer-actions">
                 <button

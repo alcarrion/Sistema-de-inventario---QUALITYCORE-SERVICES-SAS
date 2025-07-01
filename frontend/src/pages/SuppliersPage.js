@@ -5,35 +5,35 @@ import { API_URL, getCookie } from "../services/api";
 import { FaPlus, FaEdit, FaTrash, FaSearch } from "react-icons/fa";
 import AddSupplierForm from "../components/AddSupplierForm";
 import EditSupplierForm from "../components/EditSupplierForm";
-import "../styles/pages/SuppliersPage.css"; 
+import "../styles/pages/SuppliersPage.css";
 
 export default function SuppliersPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));
-  const [proveedores, setProveedores] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
-  const [editingProveedor, setEditingProveedor] = useState(null);
+  const [editingSupplier, setEditingSupplier] = useState(null);
   const [search, setSearch] = useState("");
 
-  const isAdmin = currentUser?.rol === "Administrador";
+  const isAdmin = currentUser?.role === "Administrator";
 
   useEffect(() => {
     fetch(`${API_URL}/suppliers/`, { credentials: "include" })
       .then(res => res.json())
-      .then(data => setProveedores(data.filter(p => !p.deleted_at)))
-      .catch(() => setProveedores([]));
+      .then(data => setSuppliers(data.filter(p => !p.deleted_at)))
+      .catch(() => setSuppliers([]));
   }, [showAdd, showEdit]);
 
-  const filtered = proveedores.filter(p =>
-    p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    (p.RUC && p.RUC.includes(search)) ||
-    (p.correo && p.correo.toLowerCase().includes(search.toLowerCase())) ||
-    (p.telefono && p.telefono.includes(search))
+  const filtered = suppliers.filter(p =>
+    (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
+    (p.tax_id && p.tax_id.includes(search)) ||
+    (p.email && p.email.toLowerCase().includes(search.toLowerCase())) ||
+    (p.phone && p.phone.includes(search))
   );
 
-  const handleDelete = (proveedor) => {
+  const handleDelete = (supplier) => {
     if (!window.confirm("¿Seguro que deseas eliminar este proveedor?")) return;
-    fetch(`${API_URL}/suppliers/${proveedor.id}/`, {
+    fetch(`${API_URL}/suppliers/${supplier.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -43,7 +43,7 @@ export default function SuppliersPage({ user }) {
       body: JSON.stringify({ deleted_at: new Date().toISOString() }),
     })
       .then(res => res.json())
-      .then(() => setProveedores(prev => prev.filter(p => p.id !== proveedor.id)));
+      .then(() => setSuppliers(prev => prev.filter(p => p.id !== supplier.id)));
   };
 
   return (
@@ -68,20 +68,20 @@ export default function SuppliersPage({ user }) {
         )}
       </div>
       <div className="suppliers-list">
-        {filtered.map(proveedor => (
-          <div key={proveedor.id} className="supplier-card">
-            <div><strong>NOMBRE:</strong> {proveedor.nombre}</div>
-            <div><strong>CORREO:</strong> {proveedor.correo || "-"}</div>
-            <div><strong>RUC:</strong> {proveedor.RUC || "-"}</div>
-            <div><strong>TELÉFONO:</strong> {proveedor.telefono || "-"}</div>
-            <div><strong>DIRECCIÓN:</strong> {proveedor.direccion || "-"}</div>
+        {filtered.map(supplier => (
+          <div key={supplier.id} className="supplier-card">
+            <div><strong>NOMBRE:</strong> {supplier.name}</div>
+            <div><strong>CORREO:</strong> {supplier.email || "-"}</div>
+            <div><strong>RUC / CÉDULA:</strong> {supplier.tax_id || "-"}</div>
+            <div><strong>TELÉFONO:</strong> {supplier.phone || "-"}</div>
+            <div><strong>DIRECCIÓN:</strong> {supplier.address || "-"}</div>
             {isAdmin && (
               <div className="supplier-actions">
                 <button className="btn-icon"
-                  onClick={() => { setEditingProveedor(proveedor); setShowEdit(true); }}>
+                  onClick={() => { setEditingSupplier(supplier); setShowEdit(true); }}>
                   <FaEdit />
                 </button>
-                <button className="btn-icon btn-delete" onClick={() => handleDelete(proveedor)}>
+                <button className="btn-icon btn-delete" onClick={() => handleDelete(supplier)}>
                   <FaTrash />
                 </button>
               </div>
@@ -98,17 +98,17 @@ export default function SuppliersPage({ user }) {
           />
         </Modal>
       )}
-      {showEdit && editingProveedor && (
-        <Modal onClose={() => { setShowEdit(false); setEditingProveedor(null); }}>
+      {showEdit && editingSupplier && (
+        <Modal onClose={() => { setShowEdit(false); setEditingSupplier(null); }}>
           <EditSupplierForm
-            proveedor={editingProveedor}
+            proveedor={editingSupplier}
             onSave={() => {
               setShowEdit(false);
-              setEditingProveedor(null);
+              setEditingSupplier(null);
             }}
             onCancel={() => {
               setShowEdit(false);
-              setEditingProveedor(null);
+              setEditingSupplier(null);
             }}
           />
         </Modal>

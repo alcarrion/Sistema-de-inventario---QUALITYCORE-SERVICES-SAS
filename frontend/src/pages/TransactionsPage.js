@@ -1,7 +1,23 @@
-// src/pages/TransactionsPage.js
 import React, { useState, useEffect } from "react";
 import Modal from "../components/Modal";
-import { getMovimientos, postMovimiento, getProductos, getClientes } from "../services/api";
+import {
+  getMovimientos,
+  postMovimiento,
+  getProductos,
+  getClientes,
+} from "../services/api";
+
+import {
+  PackagePlus,
+  PackageMinus,
+  ArrowUpToLine,
+  Boxes,
+  CalendarClock,
+  User,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+
 import "../styles/pages/TransactionsPage.css";
 
 function TransactionsPage() {
@@ -9,17 +25,18 @@ function TransactionsPage() {
   const [productos, setProductos] = useState([]);
   const [clientes, setClientes] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [tipo, setTipo] = useState("entrada");
-  const [formData, setFormData] = useState({
-    fecha: "",
-    cantidad: "",
-    producto: "",
-    cliente: ""
-  });
+  const [tipo, setTipo] = useState("input");
   const [mensaje, setMensaje] = useState("");
+  const [formData, setFormData] = useState({
+    date: "",
+    quantity: "",
+    product: "",
+    customer: "",
+  });
 
   const user = JSON.parse(localStorage.getItem("user"));
-  const canCreateMovimientos = user?.rol === "Administrador" || user?.rol === "Usuario";
+  const canCreateMovimientos = user?.role === "Administrator";
+
 
   useEffect(() => {
     fetchMovimientos();
@@ -34,7 +51,7 @@ function TransactionsPage() {
 
   const fetchProductos = async () => {
     const data = await getProductos();
-    const activos = data.filter(p => p.estado === "Activo");
+    const activos = data.filter((p) => p.status === "Activo");
     setProductos(activos);
   };
 
@@ -44,195 +61,292 @@ function TransactionsPage() {
   };
 
   const handleInputChange = (e) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
   const handleSubmit = async () => {
-    const productoSeleccionado = productos.find(p => p.id === parseInt(formData.producto));
+    const productoSeleccionado = productos.find(
+      (p) => p.id === parseInt(formData.product)
+    );
+    const cantidad = parseInt(formData.quantity);
 
-    const cantidad = parseInt(formData.cantidad);
-
-    if (tipo === "salida" && productoSeleccionado && cantidad > productoSeleccionado.stockActual) {
+    if (
+      tipo === "output" &&
+      productoSeleccionado &&
+      cantidad > productoSeleccionado.current_stock
+    ) {
       setMensaje("❌ No hay suficiente stock disponible para esta salida.");
       setTimeout(() => setMensaje(""), 4000);
       return;
     }
 
-    const res = await postMovimiento({ ...formData, tipoMovimiento: tipo });
+    const movimiento = {
+      date: formData.date,
+      quantity: cantidad,
+      product: parseInt(formData.product),
+      movement_type: tipo,
+    };
+
+    if (tipo === "output" && formData.customer) {
+      movimiento.customer = parseInt(formData.customer);
+    }
+
+    const res = await postMovimiento(movimiento);
+    const data = await res.json();
+
     if (res.ok) {
       fetchMovimientos();
       fetchProductos();
       window.dispatchEvent(new Event("recargarInventario"));
       setShowModal(false);
-      setFormData({ fecha: "", cantidad: "", producto: "", cliente: "" });
+      setFormData({ date: "", quantity: "", product: "", customer: "" });
       setMensaje("✅ Movimiento guardado con éxito.");
       setTimeout(() => setMensaje(""), 3000);
     } else {
-      setMensaje("❌ Error al guardar el movimiento.");
+      console.error("Error al guardar movimiento:", data);
+      setMensaje(
+        `❌ Error al guardar: ${data.detail || data.message || "ver consola"}`
+      );
       setTimeout(() => setMensaje(""), 4000);
     }
   };
 
-  const entradas = movimientos.filter(m => m.tipoMovimiento === "entrada");
-  const salidas = movimientos.filter(m => m.tipoMovimiento === "salida");
+  const entradas = movimientos.filter((m) => m.movement_type === "input");
+  const salidas = movimientos.filter((m) => m.movement_type === "output");
 
   return (
-    <div className="page">
-      <h2 style={{ marginBottom: "1rem" }}>Movimientos</h2>
+    <div className="transactions-page">
+      <div className="transactions-header">
+        <h1 className="transactions-title">Gestión de Movimientos</h1>
+        <p className="transactions-subtitle">
+          Control de entradas y salidas de inventario
+        </p>
+      </div>
 
       {mensaje && (
-        <div className={mensaje.startsWith("✅") ? "mensajeOk" : "mensajeError"}>
-          {mensaje}
+        <div
+          className={`mensaje ${
+            mensaje.startsWith("✅") ? "mensajeOk" : "mensajeError"
+          }`}
+        >
+          {mensaje.startsWith("✅") ? (
+            <>
+              <CheckCircle size={18} style={{ marginRight: "8px" }} />
+              {mensaje.replace("✅", "")}
+            </>
+          ) : (
+            <>
+              <XCircle size={18} style={{ marginRight: "8px" }} />
+              {mensaje.replace("❌", "")}
+            </>
+          )}
         </div>
       )}
 
       {canCreateMovimientos && (
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div className="botonesAccion">
           <button
-            onClick={() => { setTipo("entrada"); setShowModal(true); }}
+            onClick={() => {
+              setTipo("input");
+              setShowModal(true);
+            }}
             className="btn entradaBtn"
           >
-            ➕ Añadir Entrada
+            <PackagePlus size={18} />
+            Añadir Entrada
           </button>
           <button
-            onClick={() => { setTipo("salida"); setShowModal(true); }}
+            onClick={() => {
+              setTipo("output");
+              setShowModal(true);
+            }}
             className="btn salidaBtn"
           >
-            ➖ Añadir Salida
+            <PackageMinus size={18} />
+            Añadir Salida
           </button>
         </div>
       )}
 
-      <div className="card">
-        <h3>ENTRADAS</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th className="th">Fecha</th>
-              <th className="th">Producto</th>
-              <th className="th">Cantidad</th>
-              <th className="th">Proveedor</th>
-              <th className="th">Stock</th>
-              <th className="th">Vendedor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entradas.map((m) => (
-              <tr key={m.id}>
-                <td className="td">{new Date(m.fecha).toLocaleDateString()} {new Date(m.fecha).toLocaleTimeString()}</td>
-                <td className="td">{m.producto_nombre || m.producto}</td>
-                <td className="td">{m.cantidad}</td>
-                <td className="td">{m.proveedor_nombre}</td>
-                <td className="td">{m.stockProducto}</td>
-                <td className="td">{m.vendedor_nombre}</td>
+      {/* TABLA DE ENTRADAS */}
+      <div>
+        <h2 className="table-title">Entradas</h2>
+        <div className="table-container">
+          <table className="tabla-movimientos tabla-entradas">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Proveedor</th>
+                <th>Stock</th>
+                <th>Registrado por</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {entradas.map((m, index) => (
+                <tr
+                  key={m.id}
+                  className={index % 2 === 0 ? "row-even" : "row-odd"}
+                >
+                  <td>
+                    <div className="date-container">
+                      <div className="date">
+                        {new Date(m.date).toLocaleDateString("es-EC")}
+                      </div>
+                      <div className="time">
+                        {new Date(m.date).toLocaleTimeString("es-EC", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  </td>
+                  <td>{m.product_name}</td>
+                  <td className="quantity-positive">+{m.quantity}</td>
+                  <td>{m.supplier_name}</td>
+                  <td>{m.product_stock}</td>
+                  <td>{m.user_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div className="card">
-        <h3>SALIDAS</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th className="th">Fecha</th>
-              <th className="th">Producto</th>
-              <th className="th">Cantidad</th>
-              <th className="th">Cliente</th>
-              <th className="th">Stock</th>
-              <th className="th">Vendedor</th>
-            </tr>
-          </thead>
-          <tbody>
-            {salidas.map((m) => (
-              <tr key={m.id}>
-                <td className="td">{new Date(m.fecha).toLocaleDateString()} {new Date(m.fecha).toLocaleTimeString()}</td>
-                <td className="td">{m.producto_nombre || m.producto}</td>
-                <td className="td">{m.cantidad}</td>
-                <td className="td">{m.cliente_nombre || m.cliente}</td>
-                <td className="td">{m.stockProducto}</td>
-                <td className="td">{m.vendedor_nombre}</td>
+      {/* TABLA DE SALIDAS */}
+      <div>
+        <h2 className="table-title">Salidas</h2>
+        <div className="table-container">
+          <table className="tabla-movimientos tabla-salidas">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Cliente</th>
+                <th>Stock</th>
+                <th>Registrado por</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {salidas.map((m, index) => (
+                <tr
+                  key={m.id}
+                  className={index % 2 === 0 ? "row-even" : "row-odd"}
+                >
+                  <td>
+                    <div className="date-container">
+                      <div className="date">
+                        {new Date(m.date).toLocaleDateString("es-EC")}
+                      </div>
+                      <div className="time">
+                        {new Date(m.date).toLocaleTimeString("es-EC", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  </td>
+                  <td>{m.product_name}</td>
+                  <td className="quantity-negative">-{m.quantity}</td>
+                  <td>{m.customer_name}</td>
+                  <td>{m.product_stock}</td>
+                  <td>{m.user_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
+      {/* MODAL */}
       {showModal && (
-        <Modal title={`Añadir ${tipo}`} onClose={() => setShowModal(false)}>
-          <form className="formContainer">
+        <Modal
+          title={`${
+            tipo === "input" ? "📈 Añadir Entrada" : "📉 Añadir Salida"
+          }`}
+          onClose={() => setShowModal(false)}
+        >
+          <div className="formContainer">
             <div className="formGroup">
-              <label htmlFor="fecha" style={{ fontWeight: 600 }}>Fecha:</label>
+              <label className="form-label">
+                <CalendarClock size={16} style={{ marginRight: "6px" }} />
+                Fecha:
+              </label>
               <input
                 type="datetime-local"
-                name="fecha"
-                id="fecha"
-                value={formData.fecha}
+                name="date"
+                value={formData.date}
                 onChange={handleInputChange}
-                className="input fechaInput"
+                className="input"
               />
             </div>
 
             <div className="formGroup">
-              <label htmlFor="cantidad" style={{ fontWeight: 600 }}>Cantidad:</label>
+              <label className="form-label">
+                <ArrowUpToLine size={16} style={{ marginRight: "6px" }} />
+                Cantidad:
+              </label>
               <input
                 type="number"
-                name="cantidad"
-                id="cantidad"
-                value={formData.cantidad}
+                name="quantity"
+                value={formData.quantity}
                 onChange={handleInputChange}
-                className="input cantidadInput"
+                className="input"
+                min={1}
               />
             </div>
 
-            <div className="formGroup" style={{ flexGrow: 1 }}>
-              <label htmlFor="producto" style={{ fontWeight: 600 }}>Producto:</label>
+            <div className="formGroup">
+              <label className="form-label">
+                <Boxes size={16} style={{ marginRight: "6px" }} />
+                Producto:
+              </label>
               <select
-                name="producto"
-                id="producto"
-                value={formData.producto}
+                name="product"
+                value={formData.product}
                 onChange={handleInputChange}
-                className="select productoSelect"
+                className="select"
               >
                 <option value="">-- Selecciona un producto --</option>
-                {productos.map(p => (
-                  <option key={p.id} value={p.id}>{p.nombre}</option>
+                {productos.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {tipo === "salida" && (
-              <div className="formGroup" style={{ flexGrow: 1 }}>
-                <label htmlFor="cliente" style={{ fontWeight: 600 }}>Cliente:</label>
+            {tipo === "output" && (
+              <div className="formGroup">
+                <label className="form-label">
+                  <User size={16} style={{ marginRight: "6px" }} />
+                  Cliente:
+                </label>
                 <select
-                  name="cliente"
-                  id="cliente"
-                  value={formData.cliente}
+                  name="customer"
+                  value={formData.customer}
                   onChange={handleInputChange}
-                  className="select clienteSelect"
+                  className="select"
                 >
                   <option value="">-- Selecciona un cliente --</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  {clientes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
                   ))}
                 </select>
               </div>
             )}
 
-            <div>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="formButton"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
+            <button type="button" onClick={handleSubmit} className="formButton">
+              Guardar Movimiento
+            </button>
+          </div>
         </Modal>
       )}
     </div>

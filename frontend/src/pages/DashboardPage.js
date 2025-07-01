@@ -1,91 +1,132 @@
-// src/pages/DashboardPage.js
 import React, { useState, useEffect } from "react";
 import UserProfile from "../components/UserProfile";
 import Modal from "../components/Modal";
 import EditProfileForm from "../components/EditProfileForm";
 import { ChangePasswordForm } from "../components/ChangePasswordForm";
 import { AddUserForm } from "../components/AddUserForm";
-import { Package, DollarSign, Users, Activity, Search, Bell, Settings } from "lucide-react";
-import { API_URL, getCookie } from "../services/api";
-import "../styles/pages/DashboardPage.css"; 
+import { Package, DollarSign, Users, Activity, Bell } from "lucide-react";
+import {
+  getAlertas,
+  dismissAlerta,
+  API_URL,
+  getCookie,
+} from "../services/api";
+import "../styles/pages/DashboardPage.css";
 
 export default function DashboardPage() {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem("user")) || { nombre: "Usuario", rol: "Sin rol" });
+  const [user, setUser] = useState(
+    JSON.parse(localStorage.getItem("user")) || { name: "Usuario", role: "Sin rol" }
+  );
   const [showProfile, setShowProfile] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [alertas, setAlertas] = useState([]);
+  const [mensaje, setMensaje] = useState(""); // NUEVO estado
+
+  const [dashboardData, setDashboardData] = useState({
+    total_products: 0,
+    total_customers: 0,
+    total_movements: 0,
+    total_entries: 0,
+    total_exits: 0,
+    low_stock_alerts: 0,
+    total_sales: 0,
+  });
+
+  useEffect(() => {
+    fetchAlertas();
+    fetchDashboardSummary();
+  }, []);
+
+  const fetchAlertas = async () => {
+    const data = await getAlertas();
+    setAlertas(data);
+  };
+
+  const fetchDashboardSummary = async () => {
+    const res = await fetch(`${API_URL}/dashboard/summary/`, {
+      method: "GET",
+      headers: {
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      credentials: "include",
+    });
+    const data = await res.json();
+    setDashboardData(data);
+  };
+
+  const cerrarAlerta = async (id) => {
+    const res = await dismissAlerta(id);
+    if (res.ok) {
+      setAlertas((prev) => prev.filter((a) => a.id !== id));
+      setMensaje(res.message || "✅ Alerta cerrada correctamente");
+    } else {
+      setMensaje("❌ No se pudo cerrar la alerta");
+    }
+    setTimeout(() => setMensaje(""), 4000);
+  };
+
+  const handleSaveEdit = (data) => {
+    setUser(data);
+    localStorage.setItem("user", JSON.stringify(data));
+    setShowEdit(false);
+  };
 
   const stats = [
     {
       icon: <Package size={32} color="#3475eb" />,
       color: "#e6eeff",
-      value: "1,247",
+      value: dashboardData.total_products,
       label: "Productos Totales",
-      percent: "+12%",
-      percentColor: "#16c784"
     },
     {
       icon: <DollarSign size={32} color="#34cb74" />,
       color: "#e6fbe7",
-      value: "$24,580",
-      label: "Ventas del Mes",
-      percent: "+8%",
-      percentColor: "#16c784"
+      value: dashboardData.total_sales,
+      label: "Ventas Totales",
     },
     {
       icon: <Users size={32} color="#9057ff" />,
       color: "#efeaff",
-      value: "892",
+      value: dashboardData.total_customers,
       label: "Clientes Registrados",
-      percent: "+5%",
-      percentColor: "#6c47e1"
+    },
+    {
+      icon: <Activity size={32} color="#ff9900" />,
+      color: "#fff5e6",
+      value: dashboardData.total_movements,
+      label: "Movimientos Totales",
+    },
+    {
+      icon: <Activity size={32} color="#28a745" />,
+      color: "#e6f9ec",
+      value: dashboardData.total_entries,
+      label: "Entradas",
+    },
+    {
+      icon: <Activity size={32} color="#dc3545" />,
+      color: "#fdecea",
+      value: dashboardData.total_exits,
+      label: "Salidas",
+    },
+    {
+      icon: <Bell size={32} color="#ffc107" />,
+      color: "#fffbe6",
+      value: dashboardData.low_stock_alerts,
+      label: "Alertas de Stock",
     },
   ];
-
-  useEffect(() => {
-    fetch(`${API_URL}/alerts/`, {
-      method: "GET",
-      headers: {
-        "X-CSRFToken": getCookie("csrftoken")
-      },
-      credentials: "include"  
-    })
-      .then(res => res.json())
-      .then(data => setAlertas(data));
-  }, []);
-
-  const cerrarAlerta = async (id) => {
-    await fetch(`${API_URL}/alerts/${id}/`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRFToken": getCookie("csrftoken")
-      },
-      credentials: "include",
-      body: JSON.stringify({ deleted_at: new Date().toISOString() })
-    });
-    setAlertas(prev => prev.filter(a => a.id !== id));
-  };
-
-  const handleSaveEdit = (data) => {
-    setUser(data);
-    setShowEdit(false);
-    localStorage.setItem("user", JSON.stringify(data));
-  };
-
-  const handleSavePass = (oldPass, newPass) => {
-    setShowPass(false);
-  };
-
-  const handleSaveAdd = (newUser) => {
-    setShowAdd(false);
-  };
 
   return (
     <div className="dashboard-root">
       <main className="dashboard-main">
+        {mensaje && (
+          <div className={`mensaje ${mensaje.startsWith("✅") ? "mensajeOk" : "mensajeError"}`}>
+            {mensaje}
+          </div>
+        )}
+
         {showProfile ? (
           <>
             <UserProfile
@@ -97,17 +138,27 @@ export default function DashboardPage() {
             />
             {showEdit && (
               <Modal onClose={() => setShowEdit(false)}>
-                <EditProfileForm user={user} onSave={handleSaveEdit} onCancel={() => setShowEdit(false)} />
+                <EditProfileForm
+                  user={user}
+                  onSave={handleSaveEdit}
+                  onCancel={() => setShowEdit(false)}
+                />
               </Modal>
             )}
             {showPass && (
               <Modal onClose={() => setShowPass(false)}>
-                <ChangePasswordForm onSave={handleSavePass} onCancel={() => setShowPass(false)} />
+                <ChangePasswordForm
+                  onSave={() => setShowPass(false)}
+                  onCancel={() => setShowPass(false)}
+                />
               </Modal>
             )}
             {showAdd && (
               <Modal onClose={() => setShowAdd(false)}>
-                <AddUserForm onSave={handleSaveAdd} onCancel={() => setShowAdd(false)} />
+                <AddUserForm
+                  onSave={() => setShowAdd(false)}
+                  onCancel={() => setShowAdd(false)}
+                />
               </Modal>
             )}
           </>
@@ -116,75 +167,55 @@ export default function DashboardPage() {
             <div className="dashboard-header">
               <div>
                 <h1>
-                  Bienvenido/a, <span className="dashboard-user">{user?.nombre || user?.username}</span>
+                  Bienvenido/a,{" "}
+                  <span className="dashboard-user">{user?.name}</span>
                 </h1>
-                <div className="dashboard-sub">Gestiona tu inventario de manera eficiente</div>
-              </div>
-              <div className="dashboard-header-actions">
-                <div className="dashboard-search">
-                  <Search size={18} />
-                  <input type="text" placeholder="Buscar productos..." />
+                <div className="dashboard-sub">
+                  Gestiona tu inventario de manera eficiente
                 </div>
-                <Bell size={22} style={{ margin: "0 18px" }} />
-                <Settings size={22} />
               </div>
             </div>
 
-            {alertas.length > 0 && (
-              <div className="dashboard-alertas" style={{ marginBottom: "1.5rem" }}>
-                <h3 style={{ marginBottom: "0.5rem" }}>🚨 Alertas de Stock</h3>
-                <ul>
+            <div className="dashboard-stats">
+              {stats.map((stat, i) => (
+                <div className="dashboard-card" key={i}>
+                  <div
+                    className="dashboard-card-icon"
+                    style={{ background: stat.color }}
+                  >
+                    {stat.icon}
+                  </div>
+                  <div className="dashboard-card-info">
+                    <div className="dashboard-card-value">{stat.value}</div>
+                    <div className="dashboard-card-label">{stat.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="dashboard-widget">
+              <div className="dashboard-widget-title">🔔 Alertas de Bajo Stock</div>
+              {alertas.length > 0 ? (
+                <ul className="dashboard-alert-list">
                   {alertas.map((alerta) => (
-                    <li key={alerta.id} style={{
-                      marginBottom: "0.5rem",
-                      padding: "0.6rem",
-                      background: "#fffbe6",
-                      borderRadius: "6px",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center"
-                    }}>
+                    <li key={alerta.id} className="dashboard-alert-item">
                       <div>
-                        <strong>{alerta.producto_nombre}:</strong> {alerta.mensaje}
+                        <strong>{alerta.product_name}:</strong> {alerta.message}
                       </div>
                       <button
                         onClick={() => cerrarAlerta(alerta.id)}
-                        style={{
-                          background: "#dc3545",
-                          color: "#fff",
-                          border: "none",
-                          padding: "0.3rem 0.7rem",
-                          borderRadius: "6px",
-                          cursor: "pointer"
-                        }}
+                        className="dashboard-alert-dismiss"
                       >
                         Ocultar
                       </button>
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
-
-            <div className="dashboard-stats">
-              {stats.map((stat, i) => (
-                <div className="dashboard-card" key={i}>
-                  <div className="dashboard-card-icon" style={{ background: stat.color }}>{stat.icon}</div>
-                  <div className="dashboard-card-info">
-                    <div className="dashboard-card-value">{stat.value}</div>
-                    <div className="dashboard-card-label">{stat.label}</div>
-                  </div>
-                  <div className="dashboard-card-percent" style={{ color: stat.percentColor }}>{stat.percent}</div>
-                </div>
-              ))}
-            </div>
-
-            <div className="dashboard-widget">
-              <div className="dashboard-widget-title">Resumen de Ventas</div>
-              <div className="dashboard-widget-placeholder">
-                <Activity size={38} color="#bbb" />
-                <span style={{ marginLeft: 12, color: "#aaa" }}>Aquí se mostrará el gráfico de ventas</span>
-              </div>
+              ) : (
+                <p style={{ color: "#888", marginTop: "1rem" }}>
+                  No hay alertas activas. Todo el stock está en buen estado 👍
+                </p>
+              )}
             </div>
           </>
         )}

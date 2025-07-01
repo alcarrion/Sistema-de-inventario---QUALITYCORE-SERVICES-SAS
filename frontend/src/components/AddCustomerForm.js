@@ -3,13 +3,12 @@ import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
 import "../styles/components/Form.css";
 
-
 export default function AddCustomerForm({ onSave, onCancel }) {
-  const [nombre, setNombre] = useState("");
-  const [correo, setCorreo] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [cedulaRUC, setCedulaRUC] = useState("");
-  const [direccion, setDireccion] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [document, setDocument] = useState("");
+  const [address, setAddress] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +17,7 @@ export default function AddCustomerForm({ onSave, onCancel }) {
     setLoading(true);
     setError("");
 
-    // Validaciones rápidas
-    if (!nombre || !cedulaRUC) {
+    if (!name || !document) {
       setError("Nombre y cédula son obligatorios.");
       setLoading(false);
       return;
@@ -34,11 +32,11 @@ export default function AddCustomerForm({ onSave, onCancel }) {
         },
         credentials: "include",
         body: JSON.stringify({
-          nombre,
-          correo,
-          cedulaRUC,
-          telefono,
-          direccion,
+          name,
+          email,
+          phone,
+          document,
+          address,
         }),
       });
       if (!res.ok) {
@@ -59,25 +57,24 @@ export default function AddCustomerForm({ onSave, onCancel }) {
       <div className="form-title">Añadir nuevo cliente</div>
       <div className="form-group">
         <label>Nombre</label>
-        <input value={nombre} onChange={e => setNombre(e.target.value)} required />
+        <input value={name} onChange={e => setName(e.target.value)} required />
       </div>
       <div className="form-group">
         <label>Correo</label>
-        <input value={correo} onChange={e => setCorreo(e.target.value)} required />
+        <input value={email} onChange={e => setEmail(e.target.value)} />
       </div>
       <div className="form-group">
         <label>Cédula / RUC</label>
-        <input value={cedulaRUC} onChange={e => setCedulaRUC(e.target.value)} required />
+        <input value={document} onChange={e => setDocument(e.target.value)} required />
       </div>
       <div className="form-group">
         <label>Teléfono</label>
-        <input value={telefono} onChange={e => setTelefono(e.target.value)} />
+        <input value={phone} onChange={e => setPhone(e.target.value)} />
       </div>
       <div className="form-group">
         <label>Dirección</label>
-        <input value={direccion} onChange={e => setDireccion(e.target.value)} />
+        <input value={address} onChange={e => setAddress(e.target.value)} />
       </div>
-      {/* Puedes agregar campo de correo si lo necesitas */}
       {error && <div className="form-error">{error}</div>}
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>

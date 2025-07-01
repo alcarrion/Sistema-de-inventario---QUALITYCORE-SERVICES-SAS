@@ -2,20 +2,17 @@ import os
 from pathlib import Path
 import environ
 
-# --- Inicializar entorno ---
+# --- Load environment variables ---
 BASE_DIR = Path(__file__).resolve().parent.parent
-env = environ.Env(
-    DEBUG=(bool, False)
-)
-# Lee el archivo .env (ajusta si tu .env está en otra carpeta)
+env = environ.Env(DEBUG=(bool, False))
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# --- Configuraciones principales ---
+# --- Main configuration ---
 SECRET_KEY = env('SECRET_KEY')
 DEBUG = env('DEBUG')
 ALLOWED_HOSTS = env('ALLOWED_HOSTS').split(',')
 
-# --- Apps instaladas ---
+# --- Installed apps ---
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -23,18 +20,23 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Terceros
     'rest_framework',
     'corsheaders',
-    'productos',  # tu app
+
+    # App propia
+    'inventory_app',
 ]
 
-AUTH_USER_MODEL = 'productos.Usuario'
+# --- Custom user model ---
+AUTH_USER_MODEL = 'inventory_app.User'
 
+# --- Custom authentication backends ---
 AUTHENTICATION_BACKENDS = [
-    'productos.backends.EmailBackend',   # Cambia 'tuapp' por el nombre de tu app
-    'django.contrib.auth.backends.ModelBackend',  # Opción por defecto
+    'inventory_app.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
 ]
-
 
 # --- Middleware ---
 MIDDLEWARE = [
@@ -48,8 +50,11 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'inventario.urls'
+# --- Root URLs and WSGI ---
+ROOT_URLCONF = 'inventory.urls'
+WSGI_APPLICATION = 'inventory.wsgi.application'
 
+# --- Templates ---
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -66,9 +71,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'inventario.wsgi.application'
-
-# --- Base de datos ---
+# --- Database configuration (PostgreSQL) ---
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -80,16 +83,15 @@ DATABASES = {
     }
 }
 
-
-# --- Validadores de contraseña ---
+# --- Password validation ---
 AUTH_PASSWORD_VALIDATORS = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',},
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# --- Enviar correo para recuperar contraseña ---
+# --- Email configuration (for password recovery) ---
 EMAIL_HOST = env('EMAIL_HOST')
 EMAIL_PORT = env('EMAIL_PORT')
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS')
@@ -97,34 +99,27 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
-# --- Internacionalización ---
+# --- Internationalization ---
 LANGUAGE_CODE = 'es-ec'
 TIME_ZONE = 'America/Guayaquil'
 USE_I18N = True
 USE_TZ = True
 
-# --- Archivos estáticos ---
-STATIC_URL = 'static/'
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-
-
-# --- CORS para frontend ---
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # URL de tu frontend
-]
-CORS_ALLOW_CREDENTIALS = True  # <- Esto te permite enviar cookies/sesiones
-
-
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-]
-
-
-
+# --- Static and media files ---
+STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# --- Primary key field type ---
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# --- CORS para frontend ---
-#CORS_ALLOW_ALL_ORIGINS = True
+# --- CORS (for React frontend) ---
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+
+# --- CSRF (for secure POST requests) ---
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]

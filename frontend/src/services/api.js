@@ -17,7 +17,7 @@ export function getCookie(name) {
   return cookieValue;
 }
 
-// ✅ Solo una función loginUser 
+// ✅ Login
 export async function loginUser(email, password) {
   const csrftoken = getCookie("csrftoken");
   try {
@@ -33,7 +33,6 @@ export async function loginUser(email, password) {
 
     const data = await res.json();
 
-    // 👇 Guarda el usuario en localStorage si todo va bien
     if (res.ok && data.user) {
       localStorage.setItem("user", JSON.stringify(data.user));
     }
@@ -44,7 +43,7 @@ export async function loginUser(email, password) {
   }
 }
 
-// Recuperación de contraseña
+// ✅ Recuperación de contraseña
 export async function forgotPassword(email) {
   try {
     const res = await fetch(`${API_URL}/forgot-password/`, {
@@ -59,66 +58,113 @@ export async function forgotPassword(email) {
   }
 }
 
-// Obtener lista de movimientos
+// ✅ Obtener lista de movimientos
 export async function getMovimientos() {
   const res = await fetch(`${API_URL}/movements/`, {
-    credentials: "include"
+    credentials: "include",
   });
   return await res.json();
 }
 
-// Crear nuevo movimiento
+// ✅ Crear nuevo movimiento
 export async function postMovimiento(data) {
   const csrftoken = getCookie("csrftoken");
   const res = await fetch(`${API_URL}/movements/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": csrftoken
+      "X-CSRFToken": csrftoken,
     },
     credentials: "include",
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   return res;
 }
 
-// Obtener lista de productos
+// ✅ Obtener lista de productos
 export async function getProductos() {
   const res = await fetch(`${API_URL}/products/`, {
-    credentials: "include"
+    credentials: "include",
   });
   return await res.json();
 }
 
-// Obtener lista de clientes
+// ✅ Obtener lista de clientes
 export async function getClientes() {
   const res = await fetch(`${API_URL}/customers/`, {
-    credentials: "include"
+    credentials: "include",
   });
   return await res.json();
 }
 
-// Crear nueva cotización
+// ✅ Crear nueva cotización (ruta corregida)
 export async function postCotizacion(data) {
   const csrftoken = getCookie("csrftoken");
-  const res = await fetch(`${API_URL}/quotations/`, {
+  const res = await fetch(`${API_URL}/quotations/create/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-CSRFToken": csrftoken
+      "X-CSRFToken": csrftoken,
     },
     credentials: "include",
-    body: JSON.stringify(data)
+    body: JSON.stringify(data),
   });
   const result = await res.json();
   return { ok: res.ok, ...result };
 }
 
-// Generar PDF de una cotización por ID
+// ✅ Generar PDF de una cotización por ID
 export async function getCotizacionPDF(cotizacionId) {
-  const res = await fetch(`${API_URL}/quotations/${cotizacionId}/pdf/`, {
+  const res = await fetch(`${API_URL}/quotations/pdf/${cotizacionId}/`, {
     method: "GET",
-    credentials: "include"
+    credentials: "include",
+  });
+  const result = await res.json();
+  return { ok: res.ok, ...result };
+}
+
+// ✅ Obtener reportes generados
+export async function getReportes() {
+  const res = await fetch(`${API_URL}/reports/`, {
+    credentials: "include",
+  });
+  return await res.json();
+}
+
+// ✅ Generar nuevo reporte PDF (por tipo y fechas)
+export async function postReporte(data) {
+  const csrftoken = getCookie("csrftoken");
+  const res = await fetch(`${API_URL}/reports/generate/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrftoken,
+    },
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  const result = await res.json();
+  return { ok: res.ok, ...result };
+}
+
+// ✅ Obtener alertas
+export async function getAlertas() {
+  const res = await fetch(`${API_URL}/alerts/`, {
+    credentials: "include",
+  });
+  return await res.json();
+}
+
+// ✅ Marcar alerta como resuelta
+export async function dismissAlerta(alertId) {
+  const csrftoken = getCookie("csrftoken");
+  const res = await fetch(`${API_URL}/alerts/${alertId}/dismiss/`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRFToken": csrftoken,
+    },
+    credentials: "include",
   });
   const result = await res.json();
   return { ok: res.ok, ...result };

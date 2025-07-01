@@ -1,6 +1,19 @@
 // src/pages/QuotationPage.js
 import React, { useState, useEffect } from "react";
 import {
+  User,
+  Package,
+  Plus,
+  X,
+  FileSpreadsheet,
+  Receipt,
+  CreditCard,
+  StickyNote,
+  Save,
+  File,
+} from "lucide-react";
+
+import {
   getClientes,
   getProductos,
   getCookie,
@@ -8,7 +21,7 @@ import {
   getCotizacionPDF,
 } from "../services/api";
 
-import "../styles/pages/QuotationPage.css"; 
+import "../styles/pages/QuotationPage.css";
 
 export default function QuotationPage() {
   const [cliente, setCliente] = useState("");
@@ -41,41 +54,35 @@ export default function QuotationPage() {
   const handleAddProducto = () => {
     setProductosCotizados([
       ...productosCotizados,
-      { producto: "", cantidad: 1, precioUnitario: 0, subtotal: 0 },
+      { product: "", quantity: 1, unit_price: 0, subtotal: 0 },
     ]);
   };
 
   const handleProductoChange = (index, field, value) => {
     const nuevos = [...productosCotizados];
-    
-    if (field === "cantidad" || field === "precioUnitario") {
-      if (value === "") {
-        nuevos[index][field] = value; // permite borrar
-      } else {
-        value = value.replace(/^0+(?=\d)/, ""); 
-        nuevos[index][field] = Number(value);
-      }
+
+    if (field === "quantity" || field === "unit_price") {
+      nuevos[index][field] = value === "" ? "" : Number(value.replace(/^0+(?=\d)/, ""));
     } else {
       nuevos[index][field] = value;
     }
 
-    if (field === "producto") {
+    if (field === "product") {
       const productoObj = productos.find((p) => p.id === parseInt(value));
       if (productoObj) {
-        nuevos[index].precioUnitario = Number(productoObj.precio);
-        nuevos[index].cantidad = 1;
-        nuevos[index].subtotal = Number(productoObj.precio);
+        nuevos[index].unit_price = Number(productoObj.price);
+        nuevos[index].quantity = 1;
+        nuevos[index].subtotal = Number(productoObj.price);
       }
     } else {
-      const cantidad = Number(nuevos[index].cantidad) || 0;
-      const precio = Number(nuevos[index].precioUnitario) || 0;
+      const cantidad = Number(nuevos[index].quantity) || 0;
+      const precio = Number(nuevos[index].unit_price) || 0;
       nuevos[index].subtotal = cantidad * precio;
     }
 
     setProductosCotizados(nuevos);
     recalcularTotales(nuevos);
   };
-
 
   const recalcularTotales = (productos) => {
     const nuevoSubtotal = productos.reduce((acc, p) => acc + p.subtotal, 0);
@@ -90,7 +97,7 @@ export default function QuotationPage() {
   const handleGuardar = async () => {
     const csrftoken = getCookie("csrftoken");
 
-    const res = await fetch(`${API_URL}/quotations/generate/`, {
+    const res = await fetch(`${API_URL}/quotations/create/`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -98,28 +105,34 @@ export default function QuotationPage() {
       },
       credentials: "include",
       body: JSON.stringify({
-        cliente,
-        productos_cotizados: productosCotizados,
-        observaciones,
+        customer: cliente,
+        quoted_products: productosCotizados.map((p) => ({
+          product: p.product,
+          quantity: p.quantity,
+          unit_price: p.unit_price,
+        })),
+        observations: observaciones,
+        vat: iva,
       }),
     });
 
     const data = await res.json();
-    if (res.ok && data.cotizacion?.id) {
+    if (res.ok && data.quotation?.id) {
       setMensaje("✅ Cotización guardada correctamente");
       setProductosCotizados([]);
       setCliente("");
       setSubtotal(0);
       setIva(0);
       setTotal(0);
-      setObservaciones(""); 
+      setObservaciones("");
 
-      const pdfResponse = await getCotizacionPDF(data.cotizacion.id);
-      if (pdfResponse.ok && pdfResponse.url) {
-        const fullUrl = API_URL.replace("/api/productos", "") + pdfResponse.url;
+      const pdfData = await getCotizacionPDF(data.quotation.id);
+      if (pdfData.url) {
+        const fullUrl = API_URL.replace("/api/productos", "") + pdfData.url;
         setPdfUrl(fullUrl);
       }
     } else {
+      console.error("Error al guardar:", data);
       setMensaje("❌ Error al guardar la cotización");
     }
   };
@@ -134,25 +147,32 @@ export default function QuotationPage() {
       <div className="cotiz-main">
         {/* Cliente */}
         <div className="cotiz-section">
-          <div className="cotiz-title">👤 Información del Cliente</div>
+          <div className="cotiz-title">
+            <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+              <User size={18} />
+            </span>
+            Información del Cliente
+          </div>
           <label className="cotiz-label">Cliente:</label>
-          <select
-            value={cliente}
-            onChange={(e) => setCliente(e.target.value)}
-            className="cotiz-select"
-          >
+          <select value={cliente} onChange={(e) => setCliente(e.target.value)} className="cotiz-select">
             <option value="">-- Selecciona un cliente --</option>
             {clientes.map((cli) => (
-              <option key={cli.id} value={cli.id}>{cli.nombre}</option>
+              <option key={cli.id} value={cli.id}>{cli.name}</option>
             ))}
           </select>
         </div>
 
         {/* Productos Cotizados */}
         <div className="cotiz-section">
-          <div className="cotiz-title">📦 Productos Cotizados</div>
+          <div className="cotiz-title">
+            <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+              <Package size={18} />
+            </span>
+            Productos Cotizados
+          </div>
           <button onClick={handleAddProducto} className="cotiz-btn" type="button">
-            ➕ Añadir Producto
+            <Plus size={16} style={{ marginRight: "6px" }} />
+            Añadir Producto
           </button>
 
           {productosCotizados.length > 0 && (
@@ -167,41 +187,39 @@ export default function QuotationPage() {
 
           <div className="cotiz-prod-list">
             {productosCotizados.length === 0 ? (
-              <div className="cotiz-empty">📦 No hay productos agregados</div>
+              <div className="cotiz-empty">
+                <Package size={16} style={{ marginRight: "6px" }} />
+                No hay productos agregados
+              </div>
             ) : (
               productosCotizados.map((item, index) => (
                 <div key={index} className="cotiz-prod-row">
                   <select
-                    value={item.producto}
-                    onChange={(e) => handleProductoChange(index, "producto", e.target.value)}
+                    value={item.product}
+                    onChange={(e) => handleProductoChange(index, "product", e.target.value)}
                     className="cotiz-select"
                   >
                     <option value="">Producto</option>
                     {productos.map((p) => (
-                      <option key={p.id} value={p.id}>{p.nombre}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
                   </select>
                   <input
                     type="number"
                     min="1"
-                    value={item.cantidad}
-                    onChange={(e) => handleProductoChange(index, "cantidad", e.target.value)}
+                    value={item.quantity}
+                    onChange={(e) => handleProductoChange(index, "quantity", e.target.value)}
                     className="cotiz-input"
                   />
                   <input
                     type="number"
                     min="0"
                     step="0.01"
-                    value={item.precioUnitario}
-                    onChange={(e) => handleProductoChange(index, "precioUnitario", e.target.value)}
+                    value={item.unit_price}
+                    onChange={(e) => handleProductoChange(index, "unit_price", e.target.value)}
                     className="cotiz-input"
                   />
-                  <input
-                    type="text"
-                    readOnly
-                    value={item.subtotal.toFixed(2)}
-                    className="cotiz-input"
-                  />
+                  <input type="text" readOnly value={item.subtotal.toFixed(2)} className="cotiz-input" />
                   <button
                     type="button"
                     onClick={() => {
@@ -212,7 +230,7 @@ export default function QuotationPage() {
                     }}
                     className="cotiz-remove-btn"
                   >
-                    ❌
+                    <X size={18} />
                   </button>
                 </div>
               ))
@@ -222,24 +240,49 @@ export default function QuotationPage() {
 
         {/* Resumen */}
         <div className="cotiz-summary">
-          <h3>💰 Resumen de Cotización</h3>
+          <h3 className="cotiz-title">
+            <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+              <FileSpreadsheet size={18} />
+            </span>
+            Resumen de Cotización
+          </h3>
           <div className="cotiz-summary-row">
-            <span>📊 Subtotal:</span>
+            <span>
+              <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+                <FileSpreadsheet size={16} />
+              </span>
+              Subtotal:
+            </span>
             <span>${subtotal}</span>
           </div>
           <div className="cotiz-summary-row">
-            <span>🧾 IVA (15%):</span>
+            <span>
+              <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+                <Receipt size={16} />
+              </span>
+              IVA (15%):
+            </span>
             <span>${iva}</span>
           </div>
           <div className="cotiz-summary-row">
-            <span>💳 Total:</span>
+            <span>
+              <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+                <CreditCard size={16} />
+              </span>
+              Total:
+            </span>
             <span>${total}</span>
           </div>
         </div>
 
         {/* Observaciones */}
         <div className="cotiz-section">
-          <div className="cotiz-title">📝 Observaciones</div>
+          <div className="cotiz-title">
+            <span className="cotiz-icon-box" style={{ backgroundColor: "#f3f4f6", color: "#1f2937" }}>
+              <StickyNote size={18} />
+            </span>
+            Observaciones
+          </div>
           <label className="cotiz-label">Comentarios u observaciones para el cliente:</label>
           <textarea
             value={observaciones}
@@ -252,12 +295,9 @@ export default function QuotationPage() {
         </div>
 
         {/* Guardar */}
-        <button
-          onClick={handleGuardar}
-          className="cotiz-btn"
-          style={{ width: "100%" }}
-        >
-          💾 Guardar Cotización
+        <button onClick={handleGuardar} className="cotiz-btn" style={{ width: "100%" }}>
+          <Save size={16} style={{ marginRight: "6px" }} />
+          Guardar Cotización
         </button>
 
         {/* Mensaje */}
@@ -275,7 +315,7 @@ export default function QuotationPage() {
 
         {/* PDF */}
         {pdfUrl && (
-          <div style={{ textAlign: "center" }}>
+          <div style={{ textAlign: "center", marginTop: "16px" }}>
             <a
               href={pdfUrl}
               target="_blank"
@@ -283,7 +323,8 @@ export default function QuotationPage() {
               className="cotiz-pdf-link"
               onClick={handleVerPDF}
             >
-              📄 Ver PDF de la Cotización
+              <File size={16} style={{ marginRight: "6px" }} />
+              Ver PDF de la Cotización
             </a>
           </div>
         )}

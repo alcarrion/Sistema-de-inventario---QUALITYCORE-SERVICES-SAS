@@ -1,9 +1,9 @@
-// src/pages/LoginPage.js
 import React, { useEffect, useState } from "react";
 import LoginForm from "../components/LoginForm";
 import ForgotPasswordForm from "../components/ForgotPasswordForm";
 import { useNavigate } from "react-router-dom";
-import "../styles/pages/LoginPage.css"; 
+import { API_URL } from "../services/api";
+import "../styles/pages/LoginPage.css";
 
 export default function LoginPage({ setUsuario }) {
   const [showForgot, setShowForgot] = useState(false);
@@ -11,23 +11,32 @@ export default function LoginPage({ setUsuario }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Esto fuerza a que Django entregue el csrftoken antes de cualquier POST
-    fetch("http://localhost:8000/api/productos/users/", {
+    // 🔐 Obtener el CSRF token al cargar la página (por seguridad de Django)
+    fetch(`${API_URL}/login/`, {
       method: "GET",
-      credentials: "include"
+      credentials: "include",
     });
   }, []);
 
   return (
     <div className="login-container">
       <div className="card">
-        <img src={require("../assets/logo.png")} alt="Logo" className="logo" />
+        <img
+          src={require("../assets/logo.png")}
+          alt="Logo"
+          className="logo"
+        />
         <div className="titulo-app">
           SISTEMA DE GESTIÓN<br />DE INVENTARIOS
         </div>
+
         {!showForgot ? (
           <>
-            <LoginForm setMessage={setMessage} navigate={navigate} setUsuario={setUsuario} />
+            <LoginForm
+              setMessage={setMessage}
+              navigate={navigate}
+              setUsuario={setUsuario}
+            />
             <span className="link" onClick={() => setShowForgot(true)}>
               ¿Olvidaste tu contraseña?
             </span>
@@ -40,6 +49,7 @@ export default function LoginPage({ setUsuario }) {
             </span>
           </>
         )}
+
         {message && <div className="message">{message}</div>}
       </div>
     </div>

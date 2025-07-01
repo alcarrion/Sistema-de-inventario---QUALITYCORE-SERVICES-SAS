@@ -3,13 +3,12 @@ import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
 import "../styles/components/Form.css";
 
-
 export default function EditSupplierForm({ proveedor, onSave, onCancel }) {
-  const [nombre, setNombre] = useState(proveedor.nombre);
-  const [correo, setCorreo] = useState(proveedor.correo || "");
-  const [RUC, setRUC] = useState(proveedor.RUC);
-  const [telefono, setTelefono] = useState(proveedor.telefono || "");
-  const [direccion, setDireccion] = useState(proveedor.direccion || "");
+  const [name, setName] = useState(proveedor.name);
+  const [email, setEmail] = useState(proveedor.email || "");
+  const [taxId, setTaxId] = useState(proveedor.tax_id);
+  const [phone, setPhone] = useState(proveedor.phone || "");
+  const [address, setAddress] = useState(proveedor.address || "");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +17,8 @@ export default function EditSupplierForm({ proveedor, onSave, onCancel }) {
     setLoading(true);
     setError("");
 
-    if (!nombre || !RUC) {
-      setError("Nombre y RUC son obligatorios.");
+    if (!name || !taxId) {
+      setError("Nombre y RUC/Cédula son obligatorios.");
       setLoading(false);
       return;
     }
@@ -33,11 +32,11 @@ export default function EditSupplierForm({ proveedor, onSave, onCancel }) {
         },
         credentials: "include",
         body: JSON.stringify({
-          nombre,
-          correo,
-          RUC,
-          telefono,
-          direccion,
+          name,
+          email,
+          tax_id: taxId,
+          phone,
+          address,
         }),
       });
       if (!res.ok) {
@@ -56,27 +55,34 @@ export default function EditSupplierForm({ proveedor, onSave, onCancel }) {
   return (
     <form className="custom-form" onSubmit={handleSubmit}>
       <div className="form-title">Editar proveedor</div>
+
       <div className="form-group">
         <label>Nombre</label>
-        <input value={nombre} onChange={e => setNombre(e.target.value)} required />
+        <input value={name} onChange={e => setName(e.target.value)} required />
       </div>
+
       <div className="form-group">
         <label>Correo</label>
-        <input value={correo} onChange={e => setCorreo(e.target.value)} />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
       </div>
+
       <div className="form-group">
-        <label>RUC</label>
-        <input value={RUC} onChange={e => setRUC(e.target.value)} required />
+        <label>RUC / Cédula</label>
+        <input value={taxId} onChange={e => setTaxId(e.target.value)} required />
       </div>
+
       <div className="form-group">
         <label>Teléfono</label>
-        <input value={telefono} onChange={e => setTelefono(e.target.value)} />
+        <input value={phone} onChange={e => setPhone(e.target.value)} />
       </div>
+
       <div className="form-group">
         <label>Dirección</label>
-        <input value={direccion} onChange={e => setDireccion(e.target.value)} />
+        <input value={address} onChange={e => setAddress(e.target.value)} />
       </div>
+
       {error && <div className="form-error">{error}</div>}
+
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>
           {loading ? "Guardando..." : "Guardar"}

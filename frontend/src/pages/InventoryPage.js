@@ -6,78 +6,74 @@ import AddProductForm from "../components/AddProductForm";
 import EditProductForm from "../components/EditProductForm";
 import { API_URL, getCookie } from "../services/api";
 import { FaPlus, FaSearch } from "react-icons/fa";
-import "../styles/pages/InventoryPage.css"; 
+import "../styles/pages/InventoryPage.css";
 
 export default function InventoryPage({ user }) {
   const currentUser = user || JSON.parse(localStorage.getItem("user"));
-  const isAdmin = currentUser?.rol === "Administrador";
-  const [productos, setProductos] = useState([]);
+  const isAdmin = currentUser?.role === "Administrator";
+  const [products, setProducts] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [proveedores, setProveedores] = useState([]);
-  const [categorias, setCategorias] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
 
-  // Cargar productos
-  const cargarProductos = () => {
+  const loadProducts = () => {
     fetch(`${API_URL}/products/`, {
       credentials: "include",
       headers: {
         "X-CSRFToken": getCookie("csrftoken"),
-      }
+      },
     })
-      .then(res => res.json())
-      .then(data => setProductos(data.filter(p => !p.deleted_at)))
-      .catch(() => setProductos([]));
+      .then((res) => res.json())
+      .then((data) => setProducts(data.filter((p) => !p.deleted_at)))
+      .catch(() => setProducts([]));
   };
 
   useEffect(() => {
-    cargarProductos();
+    loadProducts();
   }, [showAdd, showEdit]);
 
   useEffect(() => {
-    const handleRecargar = () => cargarProductos();
-    window.addEventListener("recargarInventario", handleRecargar);
-    return () => window.removeEventListener("recargarInventario", handleRecargar);
+    const handleReload = () => loadProducts();
+    window.addEventListener("recargarInventario", handleReload);
+    return () => window.removeEventListener("recargarInventario", handleReload);
   }, []);
 
-  // Cargar proveedores
   useEffect(() => {
     fetch(`${API_URL}/suppliers/`, { credentials: "include" })
-      .then(res => res.json())
-      .then(data => setProveedores(data.filter(p => !p.deleted_at)))
-      .catch(() => setProveedores([]));
+      .then((res) => res.json())
+      .then((data) => setSuppliers(data.filter((p) => !p.deleted_at)))
+      .catch(() => setSuppliers([]));
   }, []);
 
-  // Cargar categorías
   useEffect(() => {
     fetch(`${API_URL}/categories/`, { credentials: "include" })
-      .then(res => res.json())
-      .then(data => setCategorias(data))
-      .catch(() => setCategorias([]));
+      .then((res) => res.json())
+      .then((data) => setCategories(data))
+      .catch(() => setCategories([]));
   }, []);
 
-  const productosConNombres = productos.map(p => {
-    const cat = categorias.find(c => c.id === p.categoria);
-    const prov = proveedores.find(pr => pr.id === p.proveedor);
+  const productsWithNames = products.map((p) => {
+    const cat = categories.find((c) => c.id === p.category);
+    const prov = suppliers.find((s) => s.id === p.supplier);
     return {
       ...p,
-      categoria_nombre: cat ? cat.nombre : "-",
-      proveedor_nombre: prov ? prov.nombre : "-"
+      category_name: cat ? cat.name : "-",
+      supplier_name: prov ? prov.name : "-",
     };
   });
 
-  const filtered = productosConNombres.filter(p =>
-    p.nombre.toLowerCase().includes(search.toLowerCase()) ||
-    (p.categoria_nombre && p.categoria_nombre.toLowerCase().includes(search.toLowerCase())) ||
-    (p.proveedor_nombre && p.proveedor_nombre.toLowerCase().includes(search.toLowerCase()))
+  const filtered = productsWithNames.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) ||
+    (p.category_name && p.category_name.toLowerCase().includes(search.toLowerCase())) ||
+    (p.supplier_name && p.supplier_name.toLowerCase().includes(search.toLowerCase()))
   );
 
-  // Eliminar producto (soft-delete)
-  const handleDelete = producto => {
+  const handleDelete = (product) => {
     if (!window.confirm("¿Seguro que deseas eliminar este producto?")) return;
-    fetch(`${API_URL}/products/${producto.id}/`, {
+    fetch(`${API_URL}/products/${product.id}/`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
@@ -86,8 +82,8 @@ export default function InventoryPage({ user }) {
       credentials: "include",
       body: JSON.stringify({ deleted_at: new Date().toISOString() }),
     })
-      .then(res => res.json())
-      .then(() => setProductos(prev => prev.filter(p => p.id !== producto.id)));
+      .then((res) => res.json())
+      .then(() => setProducts((prev) => prev.filter((p) => p.id !== product.id)));
   };
 
   return (
@@ -101,7 +97,7 @@ export default function InventoryPage({ user }) {
           <input
             placeholder="Buscar productos..."
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         {isAdmin && (
@@ -111,13 +107,16 @@ export default function InventoryPage({ user }) {
         )}
       </div>
       <div className="product-list">
-        {filtered.map(producto => (
+        {filtered.map((product) => (
           <ProductCard
-            key={producto.id}
-            producto={producto}
+            key={product.id}
+            producto={product}
             isAdmin={isAdmin}
-            onEdit={p => { setEditingProduct(p); setShowEdit(true); }}
-            onDelete={p => handleDelete(p)}
+            onEdit={(p) => {
+              setEditingProduct(p);
+              setShowEdit(true);
+            }}
+            onDelete={(p) => handleDelete(p)}
           />
         ))}
         {filtered.length === 0 && (
@@ -127,30 +126,39 @@ export default function InventoryPage({ user }) {
       {showAdd && (
         <Modal onClose={() => setShowAdd(false)}>
           <AddProductForm
-            proveedores={proveedores}
-            categorias={categorias}
+            proveedores={suppliers}
+            categorias={categories}
             onSave={() => setShowAdd(false)}
             onCancel={() => setShowAdd(false)}
             recargarCategorias={() => {
               fetch(`${API_URL}/categories/`, { credentials: "include" })
-                .then(res => res.json())
-                .then(data => setCategorias(data));
+                .then((res) => res.json())
+                .then((data) => setCategories(data));
             }}
           />
         </Modal>
       )}
       {showEdit && editingProduct && (
-        <Modal onClose={() => { setShowEdit(false); setEditingProduct(null); }}>
+        <Modal onClose={() => {
+          setShowEdit(false);
+          setEditingProduct(null);
+        }}>
           <EditProductForm
             producto={editingProduct}
-            proveedores={proveedores}
-            categorias={categorias}
-            onSave={() => { setShowEdit(false); setEditingProduct(null); }}
-            onCancel={() => { setShowEdit(false); setEditingProduct(null); }}
+            proveedores={suppliers}
+            categorias={categories}
+            onSave={() => {
+              setShowEdit(false);
+              setEditingProduct(null);
+            }}
+            onCancel={() => {
+              setShowEdit(false);
+              setEditingProduct(null);
+            }}
             recargarCategorias={() => {
               fetch(`${API_URL}/categories/`, { credentials: "include" })
-                .then(res => res.json())
-                .then(data => setCategorias(data));
+                .then((res) => res.json())
+                .then((data) => setCategories(data));
             }}
           />
         </Modal>

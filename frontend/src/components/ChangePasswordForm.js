@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { API_URL, getCookie } from "../services/api";
 import "../styles/components/Form.css";
 
-
 export function ChangePasswordForm({ onSave, onCancel }) {
   const [oldPass, setOldPass] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -13,14 +12,17 @@ export function ChangePasswordForm({ onSave, onCancel }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     if (newPass !== confirmPass) {
-      setError("Passwords do not match");
+      setError("Las contraseñas no coinciden.");
       return;
     }
+
     setLoading(true);
     setError("");
 
     const csrftoken = getCookie("csrftoken");
+
     try {
       const res = await fetch(`${API_URL}/change-password/`, {
         method: "POST",
@@ -32,22 +34,34 @@ export function ChangePasswordForm({ onSave, onCancel }) {
         body: JSON.stringify({ old_password: oldPass, new_password: newPass }),
       });
 
-      if (!res.ok) throw new Error("No se pudo cambiar la contraseña.");
+      const data = await res.json();
 
-      // ✔️ Éxito: redirigir al login
-      alert("Contraseña cambiada con éxito. Por seguridad, debes iniciar sesión nuevamente.");
+      if (!res.ok) {
+        // Si el backend devuelve errores tipo {"old_password": ["incorrect"]}
+        if (data?.old_password) {
+          setError(`Contraseña actual: ${data.old_password.join(" ")}`);
+        } else if (data?.new_password) {
+          setError(`Nueva contraseña: ${data.new_password.join(" ")}`);
+        } else {
+          setError("Error al cambiar la contraseña.");
+        }
+        return;
+      }
+
+      alert("Contraseña cambiada con éxito. Debes volver a iniciar sesión.");
+      onSave(); // ← cerrar modal u otras acciones
       window.location.href = "/login";
     } catch (err) {
       setError("Hubo un error al cambiar la contraseña.");
     } finally {
       setLoading(false);
     }
-
   };
 
   return (
     <form className="custom-form" onSubmit={handleSubmit}>
       <div className="form-title">Cambiar Contraseña</div>
+
       <div className="form-group">
         <label>Contraseña Actual</label>
         <input
@@ -57,6 +71,7 @@ export function ChangePasswordForm({ onSave, onCancel }) {
           required
         />
       </div>
+
       <div className="form-group">
         <label>Nueva Contraseña</label>
         <input
@@ -66,6 +81,7 @@ export function ChangePasswordForm({ onSave, onCancel }) {
           required
         />
       </div>
+
       <div className="form-group">
         <label>Confirmar Nueva Contraseña</label>
         <input
@@ -75,7 +91,9 @@ export function ChangePasswordForm({ onSave, onCancel }) {
           required
         />
       </div>
+
       {error && <div className="form-error">{error}</div>}
+
       <div className="form-actions">
         <button className="btn-primary" type="submit" disabled={loading}>
           {loading ? "Guardando..." : "Guardar"}
@@ -87,4 +105,3 @@ export function ChangePasswordForm({ onSave, onCancel }) {
     </form>
   );
 }
-
