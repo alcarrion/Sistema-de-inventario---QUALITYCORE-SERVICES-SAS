@@ -4,14 +4,16 @@
   min-width: 200px;
   background: #fff;
   border-right: 1.5px solid #f1f2f4;
-  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  position: relative;
-  z-index: 10;
+  position: fixed; 
+  top: 0;
+  left: 0;
+  z-index: 1000;
   box-shadow: 0 0 16px rgba(100,100,100,0.03);
-}
+} 
 
 .sidebar-logo {
   display: flex;
