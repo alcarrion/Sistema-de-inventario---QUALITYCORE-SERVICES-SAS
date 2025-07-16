@@ -1,3 +1,4 @@
+# models/product.py
 from django.db import models
 from .category import Category
 from .supplier import Supplier

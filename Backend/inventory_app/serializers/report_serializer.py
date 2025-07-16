@@ -1,4 +1,4 @@
-# report_serializer.py
+# serializers/report_serializer.py
 from rest_framework import serializers
 from inventory_app.models.report import Report
 

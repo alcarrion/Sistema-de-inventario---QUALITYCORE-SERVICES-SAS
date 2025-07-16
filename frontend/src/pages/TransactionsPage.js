@@ -1,3 +1,4 @@
+// src/pages/TransactionsPage.js
 import React, { useState, useEffect } from "react";
 import Modal from "../components/Modal";
 import {
@@ -37,7 +38,6 @@ function TransactionsPage() {
   const user = JSON.parse(localStorage.getItem("user"));
   const canCreateMovimientos = user?.role === "Administrator";
 
-
   useEffect(() => {
     fetchMovimientos();
     fetchProductos();
@@ -68,6 +68,17 @@ function TransactionsPage() {
   };
 
   const handleSubmit = async () => {
+    if (
+      !formData.date ||
+      !formData.quantity ||
+      !formData.product ||
+      (tipo === "output" && !formData.customer)
+    ) {
+      setMensaje("❌ Por favor completa todos los campos obligatorios.");
+      setTimeout(() => setMensaje(""), 4000);
+      return;
+    }
+
     const productoSeleccionado = productos.find(
       (p) => p.id === parseInt(formData.product)
     );
@@ -90,7 +101,7 @@ function TransactionsPage() {
       movement_type: tipo,
     };
 
-    if (tipo === "output" && formData.customer) {
+    if (tipo === "output") {
       movimiento.customer = parseInt(formData.customer);
     }
 
@@ -107,9 +118,11 @@ function TransactionsPage() {
       setTimeout(() => setMensaje(""), 3000);
     } else {
       console.error("Error al guardar movimiento:", data);
-      setMensaje(
-        `❌ Error al guardar: ${data.detail || data.message || "ver consola"}`
-      );
+      let errorMsg = "Ocurrió un error al guardar el movimiento.";
+      if (data.detail) errorMsg += ` ${data.detail}`;
+      else if (data.message) errorMsg += ` ${data.message}`;
+      else errorMsg += " Revisa que todos los campos estén completos y válidos.";
+      setMensaje(`❌ ${errorMsg}`);
       setTimeout(() => setMensaje(""), 4000);
     }
   };
@@ -171,7 +184,7 @@ function TransactionsPage() {
         </div>
       )}
 
-      {/* TABLA DE ENTRADAS */}
+      {/* Entradas */}
       <div>
         <h2 className="table-title">Entradas</h2>
         <div className="table-container">
@@ -217,7 +230,7 @@ function TransactionsPage() {
         </div>
       </div>
 
-      {/* TABLA DE SALIDAS */}
+      {/* Salidas */}
       <div>
         <h2 className="table-title">Salidas</h2>
         <div className="table-container">
@@ -263,7 +276,7 @@ function TransactionsPage() {
         </div>
       </div>
 
-      {/* MODAL */}
+      {/* Modal */}
       {showModal && (
         <Modal
           title={`${
@@ -281,7 +294,10 @@ function TransactionsPage() {
                 type="datetime-local"
                 name="date"
                 value={formData.date}
-                onChange={handleInputChange}
+                onChange={(e) => {
+                  handleInputChange(e);
+                  e.target.blur(); // cierre automático del calendario
+                }}
                 className="input"
               />
             </div>

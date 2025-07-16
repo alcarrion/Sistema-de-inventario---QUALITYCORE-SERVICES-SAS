@@ -1,3 +1,4 @@
+# serializers/quotation_serializer.py
 from rest_framework import serializers
 from inventory_app.models.quotation import Quotation
 from inventory_app.serializers.quoted_product_serializer import QuotedProductSerializer

@@ -1,3 +1,4 @@
+// src/pages/DashboardPage.js
 import React, { useState, useEffect } from "react";
 import UserProfile from "../components/UserProfile";
 import Modal from "../components/Modal";

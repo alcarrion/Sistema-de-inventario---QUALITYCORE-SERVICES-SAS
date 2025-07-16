@@ -1,4 +1,4 @@
-# alert_serializer.py
+# serializers/alert_serializer.py
 from rest_framework import serializers
 from inventory_app.models.alert import Alert
 

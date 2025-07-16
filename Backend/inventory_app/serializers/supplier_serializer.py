@@ -1,4 +1,4 @@
-# supplier_serializer.py
+# serializers/supplier_serializer.py
 from rest_framework import serializers
 from inventory_app.models.supplier import Supplier
 

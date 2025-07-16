@@ -1,3 +1,4 @@
+# models/alert.py
 from django.db import models
 from .product import Product
 

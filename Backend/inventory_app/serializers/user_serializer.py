@@ -1,4 +1,4 @@
-# user_serializer.py
+# serializers/user_serializer.py
 from rest_framework import serializers
 from inventory_app.models.user import User
 

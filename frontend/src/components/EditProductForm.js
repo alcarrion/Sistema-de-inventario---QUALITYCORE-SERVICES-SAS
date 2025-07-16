@@ -1,3 +1,4 @@
+// src/components/EditProductForm.js
 import React, { useState, useEffect } from "react";
 import { API_URL, getCookie } from "../services/api";
 import "../styles/components/Form.css";

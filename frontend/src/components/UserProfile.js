@@ -1,3 +1,4 @@
+// src/components/UserProfile.js
 import React from "react";
 import "../App.css";
 import "../styles/pages/ProfilePage.css";

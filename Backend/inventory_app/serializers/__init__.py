@@ -1,3 +1,4 @@
+# serializers/__init__.py
 from .user_serializer import *
 from .supplier_serializer import *
 from .customer_serializer import *

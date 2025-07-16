@@ -1,3 +1,4 @@
+// src/pages/ReportsPage.js
 import React, { useState } from "react";
 import { getCookie, API_URL } from "../services/api";
 import { FileText } from "lucide-react";

@@ -1,19 +1,29 @@
+# models/customer.py
 from django.db import models
-from django.core.validators import RegexValidator
+from django.core.validators import RegexValidator, MinLengthValidator, MaxLengthValidator, EmailValidator
 
 class Customer(models.Model):
     name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100, blank=True, null=True)
-    document = models.CharField(max_length=20)
+    email = models.EmailField(
+        max_length=100,
+    )
+    document = models.CharField(
+        max_length=13,
+        validators=[
+            RegexValidator(
+                regex=r'^\d{10,13}$',
+                message='La cédula o RUC debe tener entre 10 y 13 dígitos numéricos.'
+            )
+        ]
+    )
     phone = models.CharField(
-        max_length=10,
+        max_length=13,
         blank=True,
         null=True,
         validators=[
             RegexValidator(
-                regex=r'^\d{10}$',
-                message='El teléfono debe tener exactamente 10 dígitos.',
-                code='invalid_phone'
+                regex=r'^\d+$',
+                message='El teléfono solo debe contener números.'
             )
         ]
     )

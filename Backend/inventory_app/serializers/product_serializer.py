@@ -1,4 +1,4 @@
-# product_serializer.py
+# serializers/product_serializer.py
 from rest_framework import serializers
 from inventory_app.models.product import Product
 

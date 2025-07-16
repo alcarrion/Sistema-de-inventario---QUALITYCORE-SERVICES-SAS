@@ -17,8 +17,20 @@ export default function AddSupplierForm({ onSave, onCancel }) {
     setLoading(true);
     setError("");
 
-    if (!name || !taxId) {
-      setError("Nombre y RUC/Cédula son obligatorios.");
+    if (!name || !email || !taxId || !phone) {
+      setError("Todos los campos son obligatorios excepto dirección.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[0-9]{10,13}$/.test(taxId)) {
+      setError("La cédula o RUC debe tener entre 10 y 13 dígitos numéricos.");
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[0-9]+$/.test(phone)) {
+      setError("El teléfono solo debe contener números.");
       setLoading(false);
       return;
     }
@@ -63,7 +75,7 @@ export default function AddSupplierForm({ onSave, onCancel }) {
 
       <div className="form-group">
         <label>Correo</label>
-        <input type="email" value={email} onChange={e => setEmail(e.target.value)} />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} required />
       </div>
 
       <div className="form-group">
@@ -73,7 +85,7 @@ export default function AddSupplierForm({ onSave, onCancel }) {
 
       <div className="form-group">
         <label>Teléfono</label>
-        <input value={phone} onChange={e => setPhone(e.target.value)} />
+        <input value={phone} onChange={e => setPhone(e.target.value)} required />
       </div>
 
       <div className="form-group">

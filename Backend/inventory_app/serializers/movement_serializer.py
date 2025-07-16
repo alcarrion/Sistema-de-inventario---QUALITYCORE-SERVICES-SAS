@@ -1,4 +1,4 @@
-# movement_serializer.py
+# serializers/movement_serializer.py
 from rest_framework import serializers
 from inventory_app.models.movement import Movement
 

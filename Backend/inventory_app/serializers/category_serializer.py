@@ -1,4 +1,4 @@
-# category_serializer.py
+# serializers/category_serializer.py
 from rest_framework import serializers
 from inventory_app.models.category import Category
 

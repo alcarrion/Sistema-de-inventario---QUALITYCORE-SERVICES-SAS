@@ -1,3 +1,4 @@
+# models/quoted_product.py
 from django.db import models
 from .product import Product
 from .quotation import Quotation
